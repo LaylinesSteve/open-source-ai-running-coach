@@ -146,6 +146,38 @@
       50% { transform: translateX(-50%) translateY(6px); }
     }
 
+    .plan-cta {
+      display: inline-block;
+      margin-top: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: var(--white);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      text-decoration: none;
+      border-radius: 6px;
+      transition: background 0.2s, transform 0.2s;
+      opacity: 0;
+      animation: heroTitle 0.8s cubic-bezier(0.22, 1, 0.36, 1) 1.2s forwards;
+    }
+
+    .plan-cta:hover {
+      background: var(--accent-bright);
+      transform: translateY(-1px);
+    }
+
+    .plan-cta.secondary {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    .plan-cta.secondary:hover {
+      background: rgba(232, 93, 4, 0.15);
+    }
+
     /* Section */
     section {
       max-width: 1100px;
@@ -550,6 +582,7 @@
     <p class="sub">Trail</p>
     <p class="date font-display">May 23, 2026</p>
     <p class="weeks">11 Weeks · Mar 7 → May 23</p>
+    <a href="/app" class="plan-cta">Make your own plan</a>
     <a href="#progress" class="scroll-hint" aria-label="Scroll to plan">Scroll</a>
   </header>
 
@@ -569,6 +602,9 @@
       <div class="progress-bar-wrap" data-week="10" data-mi="8" data-date="May 16"><div class="progress-bar taper" style="height: 28%;"></div><span class="progress-label">8 mi</span><span class="progress-date">May 16</span></div>
       <div class="progress-bar-wrap" data-week="11" data-mi="50K" data-date="May 23"><div class="progress-bar race" style="height: 100%;"></div><span class="progress-label">50K</span><span class="progress-date">May 23</span></div>
     </div>
+    <p style="text-align: center; margin-top: 2.5rem;">
+      <a href="/app" class="plan-cta secondary">Make your own plan</a>
+    </p>
   </section>
 
   <section id="weeks">
@@ -605,6 +641,9 @@
     <h2 class="section-title font-display">Trail 50K</h2>
     <p class="date-big font-display">May 23</p>
     <p>Saturday. Two-week taper. You’ve done this before.</p>
+    <p style="margin-top: 2rem;">
+      <a href="/app" class="plan-cta">Make your own plan</a>
+    </p>
   </section>
 
   <script>
