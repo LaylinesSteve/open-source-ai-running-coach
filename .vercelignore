@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+*.pdf
+strava_activities.json
+.git
+node_modules
+*.md
+!README.md
