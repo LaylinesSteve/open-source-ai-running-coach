@@ -4,3 +4,4 @@
 *.pdf
 strava_activities.json
 .DS_Store
+node_modules/
