@@ -48,6 +48,37 @@ export async function exchangeStravaCode(
   };
 }
 
+export async function refreshStravaToken(
+  refreshToken: string
+): Promise<{ access_token: string; refresh_token: string; expires_at: number }> {
+  const clientId = process.env.STRAVA_CLIENT_ID;
+  const clientSecret = process.env.STRAVA_CLIENT_SECRET;
+  if (!clientId || !clientSecret) throw new Error('Strava credentials not configured');
+
+  const res = await fetch(`${STRAVA_OAUTH}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Strava refresh failed: ${err}`);
+  }
+
+  const data = await res.json();
+  return {
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: data.expires_at,
+  };
+}
+
 export async function fetchStravaActivities(accessToken: string, perPage = 100): Promise<StravaActivity[]> {
   const activities: StravaActivity[] = [];
   let page = 1;

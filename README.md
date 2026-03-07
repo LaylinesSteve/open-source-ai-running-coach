@@ -7,7 +7,7 @@ Trail 50K training plan generator: your plan at `/`, and a passkey-protected flo
 - **`/`** (and **`/training-plan.html`**) — Static training plan (May 23, 2026 example).
 - **`/app`** — Passkey gate. Users enter your shared passkey to continue.
 - **`/app/form`** — Form: race name, race date, link to race, optional “Connect Strava”. Submit → create plan → redirect to Strava (if checked) or to their plan page.
-- **`/app/plan/[id]`** — Generated 11-week plan for that user (shareable link).
+- **`/app/plan/[id]`** — Generated 11-week plan for that user (shareable link). If they connected Strava, an AI uses their running history to personalize the plan; otherwise it’s generated from race date only.
 
 ## Passkey
 
@@ -25,6 +25,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `NEXT_PUBLIC_APP_URL` | Yes (prod) | Your app URL, e.g. `https://ai-fitness-coach.vercel.app` (for OAuth redirect). |
 | `KV_REST_API_URL` | Yes | Upstash Redis REST URL ([upstash.com](https://upstash.com)). |
 | `KV_REST_API_TOKEN` | Yes | Upstash Redis REST token. |
+| `OPENAI_API_KEY` | Yes (for AI plans) | OpenAI API key; used to personalize plans from Strava data. |
 | `COOKIE_SECRET` | No | Optional; defaults to `PASSKEY` for the access cookie. |
 
 ## Storage (Upstash Redis)

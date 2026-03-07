@@ -115,10 +115,17 @@ export function planWeeksToHtml(
   const startDate = weeks[0]?.range?.split('–')[0] || '';
   const endDate = weeks[10]?.range?.split('–')[1] || raceDateFormatted;
 
+  const longRunToPct = (lr: string): number => {
+    if (/50k|50K|race/i.test(lr)) return 100;
+    const n = parseInt(lr.replace(/[^\d]/g, ''), 10);
+    if (Number.isNaN(n)) return 25;
+    return Math.min(64, Math.round((n / 18) * 64)) || 21;
+  };
+
   const progressBars = weeks.map((w, i) => {
     const isTaper = w.phase.includes('Taper') && !w.raceWeek;
     const isRace = w.raceWeek;
-    const pct = isRace ? 100 : w.longRun === '18 mi' ? 64 : w.longRun === '16 mi' ? 57 : w.longRun === '14 mi' ? 50 : w.longRun === '12 mi' ? 43 : w.longRun === '11 mi' ? 39 : w.longRun === '10 mi' ? 35 : w.longRun === '8 mi' ? 28 : 21;
+    const pct = isRace ? 100 : longRunToPct(w.longRun);
     const barClass = isRace ? 'race' : isTaper ? 'taper' : '';
     const label = w.longRun;
     const datePart = w.range.split('–')[0];
