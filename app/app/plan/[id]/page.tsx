@@ -24,7 +24,7 @@ export default async function PlanPage({
   if (!html) {
     let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'));
 
-    if (plan.stravaRefreshToken && process.env.OPENAI_API_KEY) {
+    if (plan.stravaRefreshToken && process.env.GEMINI_API_KEY) {
       try {
         const accessToken = await getAccessTokenForPlan(plan);
         if (accessToken) {

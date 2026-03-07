@@ -9,6 +9,9 @@ function FormContent() {
   const [raceUrl, setRaceUrl] = useState('');
   const [raceName, setRaceName] = useState('');
   const [raceDate, setRaceDate] = useState('');
+  const [goal, setGoal] = useState('');
+  const [targetTime, setTargetTime] = useState('');
+  const [additionalInfo, setAdditionalInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,6 +33,9 @@ function FormContent() {
           raceUrl: raceUrl.trim(),
           raceName: raceName.trim() || 'Trail 50K',
           raceDate: raceDate.trim(),
+          goal: goal.trim() || undefined,
+          targetTime: targetTime.trim() || undefined,
+          additionalInfo: additionalInfo.trim() || undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -128,7 +134,71 @@ function FormContent() {
               borderRadius: 8,
               color: '#f5f5f5',
               fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Why are you running?
+          </label>
+          <select
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          >
+            <option value="">Select a goal (optional)</option>
+            <option value="Finish strong / have fun">Finish strong / have fun</option>
+            <option value="First 50K">First 50K</option>
+            <option value="PR / time goal">PR / time goal</option>
+            <option value="Qualify for longer race">Qualify for longer race</option>
+            <option value="Stay consistent">Stay consistent</option>
+            <option value="Other">Other</option>
+          </select>
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Target time (optional)
+          </label>
+          <input
+            type="text"
+            value={targetTime}
+            onChange={(e) => setTargetTime(e.target.value)}
+            placeholder="e.g. under 7 hours, 6:30"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Anything else we should know?
+          </label>
+          <textarea
+            value={additionalInfo}
+            onChange={(e) => setAdditionalInfo(e.target.value)}
+            placeholder="Injuries, terrain preference, weekly schedule, etc."
+            rows={3}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
               marginBottom: 20,
+              resize: 'vertical',
             }}
           />
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>

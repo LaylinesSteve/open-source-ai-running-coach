@@ -1,4 +1,5 @@
 import { Redis } from '@upstash/redis';
+import { createClient, type RedisClientType } from 'redis';
 
 export interface PlanRecord {
   id: string;
@@ -6,6 +7,12 @@ export interface PlanRecord {
   raceName: string;
   raceDate: string; // YYYY-MM-DD
   weeks: number;
+  /** Why they're running (e.g. "First 50K", "PR / time goal"). */
+  goal?: string;
+  /** Target time if they have one (e.g. "under 7 hours", "6:30"). */
+  targetTime?: string;
+  /** Free-text extra context from the user. */
+  additionalInfo?: string;
   stravaAccessToken?: string;
   stravaRefreshToken?: string;
   stravaExpiresAt?: number;
@@ -13,26 +20,56 @@ export interface PlanRecord {
   generatedHtml?: string;
 }
 
-function getRedis(): Redis | null {
-  const url = process.env.KV_REST_API_URL;
-  const token = process.env.KV_REST_API_TOKEN;
+const PREFIX = 'plan:';
+const TTL_SEC = 60 * 60 * 24 * 365; // 1 year
+
+/** Upstash REST API: try KV_* first, then UPSTASH_* (Vercel Marketplace). */
+function getUpstashRedis(): Redis | null {
+  const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) return null;
   return new Redis({ url, token });
 }
 
-const PREFIX = 'plan:';
+let nodeRedisClient: RedisClientType | null = null;
+
+/** Redis via REDIS_URL (e.g. Vercel Redis integration). */
+async function getNodeRedis(): Promise<RedisClientType | null> {
+  const url = process.env.REDIS_URL;
+  if (!url) return null;
+  if (nodeRedisClient?.isOpen) return nodeRedisClient;
+  const client = createClient({ url }) as RedisClientType;
+  await client.connect();
+  nodeRedisClient = client;
+  return client;
+}
 
 export async function getPlan(id: string): Promise<PlanRecord | null> {
-  const redis = getRedis();
-  if (!redis) return null;
-  const raw = await redis.get<PlanRecord>(PREFIX + id);
-  return raw ?? null;
+  const upstash = getUpstashRedis();
+  if (upstash) {
+    const raw = await upstash.get<PlanRecord>(PREFIX + id);
+    return raw ?? null;
+  }
+  const client = await getNodeRedis();
+  if (!client) return null;
+  const raw = await client.get(PREFIX + id);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as PlanRecord;
+  } catch {
+    return null;
+  }
 }
 
 export async function setPlan(plan: PlanRecord): Promise<void> {
-  const redis = getRedis();
-  if (!redis) return;
-  await redis.set(PREFIX + plan.id, plan, { ex: 60 * 60 * 24 * 365 }); // 1 year TTL
+  const upstash = getUpstashRedis();
+  if (upstash) {
+    await upstash.set(PREFIX + plan.id, plan, { ex: TTL_SEC });
+    return;
+  }
+  const client = await getNodeRedis();
+  if (!client) return;
+  await client.set(PREFIX + plan.id, JSON.stringify(plan), { EX: TTL_SEC });
 }
 
 export async function updatePlan(id: string, updates: Partial<PlanRecord>): Promise<void> {

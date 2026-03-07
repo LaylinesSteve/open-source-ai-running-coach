@@ -71,13 +71,13 @@ const PLAN_WEEK_JSON_SCHEMA = `Each week must be a JSON object with:
 - runs: array of { day: string (e.g. "Tue 3/10"), dist: string (e.g. "4 mi"), notes: string, long: boolean }
   Typical week: Tue easy, Thu easy, Sat long run, + 1 optional. Race week: Tue 3-4 mi, Thu 2-3 mi, Fri Rest, Sat 50K.`;
 
-/** Generate an 11-week trail 50K plan using the user's Strava data and race info. */
+/** Generate an 11-week trail 50K plan using the user's Strava data and race info (Gemini). */
 export async function generatePlanWithAI(
   plan: PlanRecord,
   stravaSummary: string
 ): Promise<PlanWeek[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
   const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -87,40 +87,50 @@ export async function generatePlanWithAI(
 - Long run progression: 6, 8, 10, 11, 12, 14, 16, 18 mi for weeks 1-8, then 14 mi (week 9), 8 mi (week 10), and 50K race (week 11). Two-week taper.
 - Each week: typically Tue easy, Thu easy, Sat long run, plus optional short run. Use "day" format like "Tue 3/10" with actual dates for the plan.
 - If the athlete's recent volume is low or they have gaps, suggest a softer start (e.g. week 1 long run 4-5 mi instead of 6) and note it in the week's runs or phase.
-- Output ONLY a valid JSON array of exactly 11 objects. No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA}`;
+- Use the athlete's goal, target time (if any), and any extra context to tailor advice (e.g. pacing notes for time goals, confidence-building for first 50K).
+- Output ONLY a valid JSON object with a single key "weeks" whose value is an array of exactly 11 week objects. No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA}`;
 
-  const userPrompt = `Race: ${plan.raceName}. Race date: ${raceDateStr} (Saturday). ${plan.raceUrl ? `Race link: ${plan.raceUrl}.` : ''}
+  const raceContext = [
+    `Race: ${plan.raceName}. Race date: ${raceDateStr} (Saturday).`,
+    plan.raceUrl ? `Race link (use for course/terrain context if known): ${plan.raceUrl}.` : null,
+    plan.goal ? `Athlete's goal: ${plan.goal}.` : null,
+    plan.targetTime ? `Target time: ${plan.targetTime}.` : null,
+    plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const userPrompt = `${raceContext}
 
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the 11-week plan as a JSON array. Use real dates for the plan based on race date (week 11 Saturday = race day). Each week object: num, range, miles, phase, longRun, raceWeek, runs (array of { day, dist, notes, long }).`;
+Generate the 11-week plan. Return JSON: { "weeks": [ ... ] } with 11 week objects. Use real dates (week 11 Saturday = race day). Each week: num, range, miles, phase, longRun, raceWeek, runs (array of { day, dist, notes, long }). Tailor notes and phase descriptions to the athlete's goal and context where appropriate.`;
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.3,
-    }),
-  });
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  );
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`OpenAI API error: ${err}`);
+    throw new Error(`Gemini API error: ${err}`);
   }
 
   const data = await res.json();
-  const content = data.choices?.[0]?.message?.content?.trim();
-  if (!content) throw new Error('Empty response from OpenAI');
+  const textPart = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  const content = textPart?.trim();
+  if (!content) throw new Error('Empty response from Gemini');
 
   let parsed: unknown;
   try {

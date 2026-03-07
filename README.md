@@ -25,16 +25,19 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `NEXT_PUBLIC_APP_URL` | Yes (prod) | Your app URL, e.g. `https://ai-fitness-coach.vercel.app` (for OAuth redirect). |
 | `KV_REST_API_URL` | Yes | Upstash Redis REST URL ([upstash.com](https://upstash.com)). |
 | `KV_REST_API_TOKEN` | Yes | Upstash Redis REST token. |
-| `OPENAI_API_KEY` | Yes (for AI plans) | OpenAI API key; used to personalize plans from Strava data. |
+| `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
 | `COOKIE_SECRET` | No | Optional; defaults to `PASSKEY` for the access cookie. |
 
-## Storage (Upstash Redis)
+## What is KV? Storage (Redis)
 
-Plans are stored in Redis so they survive serverless restarts.
+**KV** = key–value store. The app stores each plan under a key (e.g. `plan:abc123`). We use **Redis** for that (hosted by [Upstash](https://upstash.com)), so plans persist across serverless restarts.
 
-1. Go to [upstash.com](https://upstash.com) and create a Redis database (free tier).
-2. In the dashboard, copy **REST URL** and **REST Token**.
-3. Add them in Vercel as **`KV_REST_API_URL`** and **`KV_REST_API_TOKEN`**.
+You don’t run Redis yourself. Two ways to get the env vars:
+
+1. **From Vercel** – In your Vercel project: **Storage** tab → **Create Database** → choose **Redis** (or **Upstash Redis** in Integrations/Marketplace). Vercel will create the database and add **`KV_REST_API_URL`** and **`KV_REST_API_TOKEN`** to your project.
+2. **From Upstash** – Go to [upstash.com](https://upstash.com) → create a Redis database (free tier) → copy **REST URL** and **REST Token** → add them in Vercel **Settings → Environment Variables** as **`KV_REST_API_URL`** and **`KV_REST_API_TOKEN`**.
+
+Vercel also offers **Vercel Postgres** and **Vercel Blob**; this app is built for Redis (simple get/set by plan id). To use Postgres you’d need to change `lib/store.ts` to use SQL instead.
 
 ## Deploy to Vercel
 

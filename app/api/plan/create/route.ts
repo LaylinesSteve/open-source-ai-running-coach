@@ -13,6 +13,9 @@ export async function POST(request: NextRequest) {
   const raceUrl = (body.raceUrl || '').trim();
   const raceName = (body.raceName || 'Trail 50K').trim();
   const raceDate = (body.raceDate || '').trim(); // YYYY-MM-DD
+  const goal = (body.goal || '').trim() || undefined;
+  const targetTime = (body.targetTime || '').trim() || undefined;
+  const additionalInfo = (body.additionalInfo || '').trim() || undefined;
 
   if (!raceDate) {
     return NextResponse.json({ error: 'Race date is required' }, { status: 400 });
@@ -30,6 +33,9 @@ export async function POST(request: NextRequest) {
     raceName,
     raceDate,
     weeks: 11,
+    goal,
+    targetTime,
+    additionalInfo,
     createdAt: new Date().toISOString(),
   });
 
