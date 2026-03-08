@@ -2,9 +2,16 @@
 
 import React from 'react';
 
+/** Override so "Build to race day" bars are height-proportional for both new and legacy stored plans. */
+const progressBarChartOverride = `
+.plan-content .progress-grid { align-items: stretch !important; }
+.plan-content .progress-bar-wrap { height: 100% !important; justify-content: flex-end !important; }
+`;
+
 function PlanView({ html, planId }: { html: string; planId: string }) {
   return (
     <div style={{ position: 'relative' }}>
+      <style dangerouslySetInnerHTML={{ __html: progressBarChartOverride }} />
       <a
         href="/app/form"
         style={{
@@ -23,6 +30,7 @@ function PlanView({ html, planId }: { html: string; planId: string }) {
         New plan
       </a>
       <div
+        className="plan-content"
         dangerouslySetInnerHTML={{ __html: html }}
         style={{ minHeight: '100vh' }}
       />
