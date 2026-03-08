@@ -59,10 +59,17 @@ export async function POST(
       plan.raceUrl,
       distance
     );
+    const now = new Date().toISOString();
+    const revisionEntry = { at: now, request: userRequest };
+    const revisionRequests = [...(plan.revisionRequests || []), revisionEntry].slice(-20);
+    const coachEntry = { at: now, summary: coachSummary || plan.coachSummary || '' };
+    const coachSummaryHistory = [...(plan.coachSummaryHistory || []), coachEntry].slice(-20);
     await updatePlan(planId, {
       generatedHtml: html,
       coachSummary: coachSummary || plan.coachSummary,
       weeksData: weeks,
+      revisionRequests,
+      coachSummaryHistory,
     });
     return NextResponse.json({ ok: true });
   } catch (e) {

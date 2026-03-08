@@ -61,12 +61,18 @@ export default async function PlanPage({
     html = planWeeksToHtml(weeks, plan.raceName, plan.raceDate, plan.raceUrl, distance);
     weeksData = weeks;
     const { updatePlan } = await import('@/lib/store');
+    const now = new Date().toISOString();
+    const coachSummaryHistory =
+      coachSummary && coachSummary.trim()
+        ? [{ at: now, summary: coachSummary.trim() }]
+        : undefined;
     await updatePlan(id, {
       generatedHtml: html,
       stravaSummaryText: stravaSummaryText || undefined,
       coachSummary: coachSummary || undefined,
       weeksData,
       tips: tips || undefined,
+      coachSummaryHistory,
     });
   }
 

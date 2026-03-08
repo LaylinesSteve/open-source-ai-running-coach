@@ -108,7 +108,7 @@ export async function generatePlanWithAI(
 - If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
 - Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
-- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) } with personalized tips for this runner. For "url" use only stable, working links—e.g. https://www.runnersworld.com/training/ , https://www.runnersworld.com/nutrition/ , https://trailrunnermag.com/ , https://www.irunfar.com/ —no long article paths that may 404.
+- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) }. Each tip should be specific to this athlete (their goal, target time, recent training, and race distance). For "url": provide a real, specific article link—not a generic homepage. The article must be relevant to that tip and to the athlete (e.g. first marathon, trail 50K fueling, low-mileage build-up, taper for their distance). Use full URLs to real articles from trusted sources (Runner's World, Trail Runner Magazine, iRunFar, etc.). Only include "url" when you can point to a concrete article that fits; do not invent or guess URLs.
 - Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
 
   const raceContext = [
@@ -126,7 +126,7 @@ export async function generatePlanWithAI(
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ { "title": "...", "description": "...", "url": "..." optional } ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips; for url use only the stable domain paths above.`;
+Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ ... ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips tailored to this athlete; for each tip that has a "url", use a real, specific article URL relevant to their goals, training level, and race (not generic site links).`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -219,10 +219,30 @@ export async function revisePlanWithAI(
     2
   );
 
-  const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan. You will be given their context, current plan, and their request. Return a revised plan that addresses their request while keeping the same structure (same number of weeks, same race date ${raceDateStr}). Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of ${numWeeks} week objects, same schema as before) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.`;
+  const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan. You will be given their context, current plan, their request, and (when available) previous revision requests and what you said in past responses. Maintain continuity: acknowledge prior context where relevant and keep your tone and advice consistent. Return a revised plan that addresses their request while keeping the same structure (same number of weeks, same race date ${raceDateStr}). Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of ${numWeeks} week objects, same schema as before) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.`;
+
+  const revisionHistory = (plan.revisionRequests ?? []).slice(-10);
+  const coachHistory = (plan.coachSummaryHistory ?? []).slice(-10);
+  const contextBlock = [
+    revisionHistory.length
+      ? `Previous revision requests (oldest to newest):\n${revisionHistory.map((r) => `- [${r.at}] "${r.request}"`).join('\n')}`
+      : '',
+    coachHistory.length
+      ? `What you (the coach) said in previous responses (oldest to newest):\n${coachHistory.map((h) => `- [${h.at}] ${h.summary}`).join('\n')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const syncContext =
+    plan.lastSyncAt && plan.syncResult
+      ? `Most recent Strava sync (${plan.lastSyncAt}): ${plan.syncResult.summary}.`
+      : '';
 
   const userPrompt = `Race: ${plan.raceName}. Distance: ${distance}. Date: ${raceDateStr}.
 ${plan.goal ? `Goal: ${plan.goal}.` : ''} ${plan.targetTime ? `Target time: ${plan.targetTime}.` : ''} ${plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : ''}
+${contextBlock ? `\n${contextBlock}\n` : ''}
+${syncContext ? `${syncContext}\n\n` : ''}
 
 Recent training (Strava):
 ${stravaSummary}
@@ -230,7 +250,7 @@ ${stravaSummary}
 Current plan (JSON):
 ${currentPlanJson}
 
-Athlete's revision request: ${userRequest}
+Athlete's current revision request: ${userRequest}
 
 Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day, dist, notes, long, and coachTip (1-2 sentences of coach voice: motivation, tip, or idea). Keep real dates; last week's longRun must be "${distance}".`;
 

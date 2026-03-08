@@ -40,6 +40,10 @@ export interface PlanRecord {
     totalCompleted: number;
     summary: string;
   };
+  /** History of revision requests (what the user asked for). */
+  revisionRequests?: { at: string; request: string }[];
+  /** History of coach summaries so the AI can maintain context across revisions/sync. */
+  coachSummaryHistory?: { at: string; summary: string }[];
 }
 
 const PREFIX = 'plan:';
