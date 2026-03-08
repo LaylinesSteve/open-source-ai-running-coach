@@ -6,6 +6,9 @@ import { getPlan, updatePlan } from '@/lib/store';
 
 const FIVE_MINUTES = 5 * 60;
 
+/** Gemini model for plan generation; override with GEMINI_MODEL env (e.g. gemini-2.5-flash, gemini-3-flash-preview). */
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+
 /** Get valid Strava access token for this plan, refreshing if needed. */
 export async function getAccessTokenForPlan(plan: PlanRecord): Promise<string | null> {
   if (!plan.stravaRefreshToken) return null;
@@ -117,7 +120,7 @@ ${stravaSummary}
 Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "2-4 sentences on their training and how the plan is tailored." } Use real dates (week ${numWeeks} Saturday = race day ${raceDateStr}). Each week: num, range, miles, phase, longRun, raceWeek, runs. Last week's longRun must be "${distance}" (race day). Tailor notes to the athlete's goal and context.`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -216,7 +219,7 @@ Athlete's revision request: ${userRequest}
 Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Keep real dates; last week Saturday = race day. Last week's longRun must be "${distance}".`;
 
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

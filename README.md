@@ -26,6 +26,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `KV_REST_API_URL` | Yes | Upstash Redis REST URL ([upstash.com](https://upstash.com)). |
 | `KV_REST_API_TOKEN` | Yes | Upstash Redis REST token. |
 | `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
+| `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.5-flash`). Override if the default is deprecated (e.g. `gemini-3-flash-preview`). |
 | `COOKIE_SECRET` | No | Optional; defaults to `PASSKEY` for the access cookie. |
 
 ## What is KV? Storage (Redis)
