@@ -171,7 +171,21 @@ export function planWeeksToHtml(
     return `<div class="progress-bar-wrap" data-week="${w.num}"><div class="progress-bar ${barClass}" style="height: ${pct}%;"></div><span class="progress-label">${label}</span><span class="progress-date">${datePart}</span></div>`;
   }).join('\n      ');
 
-  const weeksJson = JSON.stringify(weeks);
+  const escapeHtml = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const weekCardsHtml = weeks
+    .map((week) => {
+      const cardClass = 'week-card' + (week.raceWeek ? ' race-week' : '');
+      const runsHtml = week.runs
+        .map((r) => {
+          const tip = (r.coachTip || '').trim();
+          const tipHtml = tip ? `<div class="run-coach-tip">${escapeHtml(tip)}</div>` : '';
+          return `<div class="run-row ${r.long ? 'long' : ''}"><div class="run-row-top"><span class="run-day">${escapeHtml(r.day)}</span><span class="run-dist">${escapeHtml(r.dist)}</span><span class="run-notes">${escapeHtml(r.notes || '')}</span></div>${tipHtml}</div>`;
+        })
+        .join('');
+      return `<div class="${cardClass}"><details><summary class="week-card-header"><div><div class="week-num">Week ${week.num}</div><div class="week-range">${escapeHtml(week.range)}</div></div><div class="week-meta"><span class="week-miles">${escapeHtml(week.miles)}</span><span class="week-phase">${escapeHtml(week.phase)}</span><span class="week-chevron">▼</span></div></summary><div class="week-body"><div class="week-body-inner"><div class="week-runs">${runsHtml}</div></div></div></details></div>`;
+    })
+    .join('\n    ');
+
   const gridCols = Math.min(numWeeks, 20);
 
   return `<!DOCTYPE html>
@@ -207,7 +221,10 @@ export function planWeeksToHtml(
     .progress-label { margin-top: 0.5rem; font-size: 0.7rem; font-weight: 600; }
     .progress-date { font-size: 0.6rem; color: var(--text-muted); }
     .week-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 0.75rem; }
-    .week-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 1rem 1.25rem; cursor: pointer; }
+    .week-card details { display: block; }
+    .week-card summary { list-style: none; cursor: pointer; }
+    .week-card summary::-webkit-details-marker { display: none; }
+    .week-card-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 1rem 1.25rem; }
     .week-num { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--text-muted); }
     .week-range { font-size: 0.95rem; font-weight: 600; }
     .week-meta { display: flex; align-items: center; gap: 1rem; }
@@ -215,9 +232,8 @@ export function planWeeksToHtml(
     .week-card.race-week .week-miles { color: var(--success); }
     .week-phase { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-muted); padding: 0.2rem 0.4rem; border: 1px solid var(--border); border-radius: 4px; }
     .week-chevron { color: var(--text-muted); transition: transform 0.2s; }
-    .week-card.open .week-chevron { transform: rotate(180deg); color: var(--accent); }
-    .week-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-    .week-card.open .week-body { max-height: 600px; }
+    .week-card details[open] .week-chevron { transform: rotate(180deg); color: var(--accent); }
+    .week-body { display: block; }
     .week-body-inner { padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--border); }
     .run-row { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .run-row:last-child { border-bottom: none; }
@@ -250,7 +266,9 @@ export function planWeeksToHtml(
   <section id="weeks">
     <p class="section-label">Weekly plan</p>
     <h2 class="section-title font-display">${numWeeks} week${numWeeks === 1 ? '' : 's'}</h2>
-    <div class="weeks-grid" id="weeksGrid"></div>
+    <div class="weeks-grid" id="weeksGrid">
+    ${weekCardsHtml}
+    </div>
   </section>
   <section class="cta-section">
     <p class="section-label">Race day</p>
@@ -258,17 +276,6 @@ export function planWeeksToHtml(
     <p class="date-big font-display">${raceDateFormatted}</p>
     <p style="color: var(--text-muted);">Save this page. You’ve got this.</p>
   </section>
-  <script>
-    const weeksData = ${weeksJson};
-    const grid = document.getElementById('weeksGrid');
-    weeksData.forEach(function(week) {
-      const card = document.createElement('div');
-      card.className = 'week-card' + (week.raceWeek ? ' race-week' : '');
-      card.innerHTML = '<div class="week-card-header"><div><div class="week-num">Week ' + week.num + '</div><div class="week-range">' + week.range + '</div></div><div class="week-meta"><span class="week-miles">' + week.miles + '</span><span class="week-phase">' + week.phase + '</span><span class="week-chevron">▼</span></div></div><div class="week-body"><div class="week-body-inner"><div class="week-runs">' + week.runs.map(function(r) { var tip = (r.coachTip || '').trim(); return '<div class="run-row ' + (r.long ? 'long' : '') + '"><div class="run-row-top"><span class="run-day">' + r.day + '</span><span class="run-dist">' + r.dist + '</span><span class="run-notes">' + (r.notes || '') + '</span></div>' + (tip ? '<div class="run-coach-tip">' + tip.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' : '') + '</div>'; }).join('') + '</div></div></div></div>';
-      card.querySelector('.week-card-header').addEventListener('click', function() { card.classList.toggle('open'); });
-      grid.appendChild(card);
-    });
-  </script>
 </body>
 </html>`;
 }
