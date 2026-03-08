@@ -7,10 +7,6 @@ const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left
 
 export default function HomePage() {
   const router = useRouter();
-  const passkeyRef = useRef<HTMLDivElement>(null);
-  const [passkey, setPasskey] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
   const [konamiIndex, setKonamiIndex] = useState(0);
   const [konamiFired, setKonamiFired] = useState(false);
   const [eggClicks, setEggClicks] = useState(0);
@@ -18,9 +14,7 @@ export default function HomePage() {
   const [visible, setVisible] = useState<Record<string, boolean>>({ hero: true });
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
-  const scrollToPasskey = () => {
-    passkeyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const goToForm = () => router.push('/app/form');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -57,30 +51,6 @@ export default function HomePage() {
     });
     return () => observer.disconnect();
   }, []);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      const res = await fetch('/api/auth/passkey', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ passkey: passkey.trim() }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error || 'Invalid passkey');
-        setLoading(false);
-        return;
-      }
-      router.push('/app/form');
-      router.refresh();
-    } catch {
-      setError('Something went wrong');
-      setLoading(false);
-    }
-  };
 
   const handleEggWordClick = useCallback(() => {
     const next = eggClicks + 1;
@@ -244,7 +214,7 @@ export default function HomePage() {
             >
               <button
                 type="button"
-                onClick={scrollToPasskey}
+                onClick={goToForm}
                 className="landing-cta"
                 style={{
                   padding: '14px 32px',
@@ -330,7 +300,7 @@ export default function HomePage() {
           ref={(el) => { sectionRefs.current.benefits = el; }}
           data-section="benefits"
           style={{
-            padding: 'clamp(64px, 12vw, 120px) 24px',
+            padding: 'clamp(8px, 1.2vw, 14px) 24px clamp(64px, 12vw, 120px) 24px',
             maxWidth: 900,
             margin: '0 auto',
           }}
@@ -388,100 +358,6 @@ export default function HomePage() {
                 <p style={{ fontSize: '0.95rem', color: '#a3a3a3', lineHeight: 1.55 }}>{item.body}</p>
               </div>
             ))}
-          </div>
-        </section>
-
-        {/* CTA + Passkey */}
-        <section
-          ref={(el) => { sectionRefs.current.getstarted = el; }}
-          data-section="getstarted"
-          style={{
-            padding: 'clamp(48px, 10vw, 100px) 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(1.75rem, 4vw, 2.25rem)',
-              letterSpacing: '0.02em',
-              marginBottom: 12,
-              opacity: visible.getstarted ? 1 : 0,
-              transform: visible.getstarted ? 'translateY(0)' : 'translateY(16px)',
-              transition: 'opacity 0.6s ease, transform 0.6s ease',
-            }}
-          >
-            Get started
-          </h2>
-          <p
-            style={{
-              color: '#737373',
-              fontSize: '0.95rem',
-              marginBottom: 32,
-              opacity: visible.getstarted ? 1 : 0,
-              transition: 'opacity 0.6s ease 0.1s',
-            }}
-          >
-            Enter your passkey to create your plan.
-          </p>
-          <div
-            ref={passkeyRef}
-            style={{
-              width: '100%',
-              maxWidth: 360,
-              opacity: visible.getstarted ? 1 : 0,
-              transform: visible.getstarted ? 'translateY(0)' : 'translateY(16px)',
-              transition: 'opacity 0.6s ease 0.15s, transform 0.6s ease 0.15s',
-            }}
-          >
-            <form onSubmit={submit}>
-              <input
-                type="password"
-                value={passkey}
-                onChange={(e) => setPasskey(e.target.value)}
-                placeholder="Passkey"
-                autoComplete="off"
-                style={{
-                  width: '100%',
-                  padding: '14px 18px',
-                  background: '#141414',
-                  border: '1px solid #262626',
-                  borderRadius: 10,
-                  color: '#f5f5f5',
-                  fontSize: 16,
-                  marginBottom: 16,
-                  boxSizing: 'border-box',
-                }}
-              />
-              {error && (
-                <p style={{ color: '#e85d04', fontSize: '0.85rem', marginBottom: 12 }}>{error}</p>
-              )}
-              <button
-                type="submit"
-                disabled={loading}
-                className="landing-cta"
-                style={{
-                  width: '100%',
-                  padding: 14,
-                  background: '#e85d04',
-                  border: 'none',
-                  borderRadius: 10,
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '1rem',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {loading ? 'Checking…' : 'Continue'}
-              </button>
-            </form>
-            <p style={{ marginTop: 24, fontSize: '0.85rem', color: '#737373', textAlign: 'center' }}>
-              <a href="/app/plan/ca5cd7bf" style={{ color: '#e85d04', textDecoration: 'none' }}>
-                View a sample plan →
-              </a>
-            </p>
           </div>
         </section>
       </div>
