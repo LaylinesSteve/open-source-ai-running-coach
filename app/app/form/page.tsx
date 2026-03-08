@@ -224,7 +224,7 @@ function FormContent() {
           >
             <option value="">Select a goal (optional)</option>
             <option value="Finish strong / have fun">Finish strong / have fun</option>
-            <option value="First 50K">First 50K</option>
+            <option value="First marathon">First marathon</option>
             <option value="PR / time goal">PR / time goal</option>
             <option value="Qualify for longer race">Qualify for longer race</option>
             <option value="Stay consistent">Stay consistent</option>

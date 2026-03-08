@@ -25,7 +25,8 @@ export default function PlanHero({
   return (
     <header
       style={{
-        minHeight: '80vh',
+        position: 'relative',
+        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -35,6 +36,38 @@ export default function PlanHero({
         background: 'radial-gradient(ellipse 80% 50% at 50% 120%, rgba(232, 93, 4, 0.15) 0%, transparent 50%), #0a0a0a',
       }}
     >
+      <style>{`
+        @keyframes planHeroScrollBounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(6px); }
+        }
+        .plan-hero-scroll-hint {
+          position: absolute;
+          bottom: 2rem;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.5rem;
+          color: #737373;
+          font-size: 0.7rem;
+          letter-spacing: 0.2em;
+          text-transform: uppercase;
+          text-decoration: none;
+          animation: planHeroScrollBounce 2s ease-in-out infinite;
+          transition: color 0.2s;
+        }
+        .plan-hero-scroll-hint:hover {
+          color: #e85d04;
+        }
+        .plan-hero-scroll-hint::after {
+          content: '';
+          width: 1px;
+          height: 40px;
+          background: linear-gradient(to bottom, #737373, transparent);
+        }
+      `}</style>
       <h1
         style={{
           fontFamily: '"Bebas Neue", sans-serif',
@@ -90,6 +123,9 @@ export default function PlanHero({
           Race info
         </a>
       )}
+      <a href="#progress" className="plan-hero-scroll-hint" aria-label="Scroll to plan">
+        Scroll
+      </a>
     </header>
   );
 }

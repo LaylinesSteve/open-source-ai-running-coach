@@ -22,7 +22,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `PASSKEY` | Yes | Secret string users enter to access `/app`. |
 | `STRAVA_CLIENT_ID` | Yes (for Strava) | From [Strava API](https://www.strava.com/settings/api). |
 | `STRAVA_CLIENT_SECRET` | Yes (for Strava) | From Strava API. |
-| `NEXT_PUBLIC_APP_URL` | Yes (prod) | Your app URL, e.g. `https://ai-fitness-coach.vercel.app` (for OAuth redirect). |
+| `NEXT_PUBLIC_APP_URL` | Yes (prod) | Your app URL, e.g. `https://running.andersonventuregroup.com` (for OAuth redirect). |
 | `KV_REST_API_URL` | Yes | Upstash Redis REST URL ([upstash.com](https://upstash.com)). |
 | `KV_REST_API_TOKEN` | Yes | Upstash Redis REST token. |
 | `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
@@ -45,7 +45,31 @@ Vercel also offers **Vercel Postgres** and **Vercel Blob**; this app is built fo
 1. Push to GitHub and import the repo at [vercel.com/new](https://vercel.com/new).
 2. **Framework Preset:** Next.js (auto-detected).
 3. Add all env vars above in **Settings → Environment Variables**.
-4. Deploy. The root URL (`/`) still shows the static training plan (via `vercel.json` rewrite). Use **`/app`** for the passkey flow.
+4. Deploy. The root URL (`/`) is the landing page; **`/app/form`** is the plan form.
+
+### Production URL: running.andersonventuregroup.com
+
+To serve the app at **https://running.andersonventuregroup.com**:
+
+**1. Strava app configuration**
+
+- Go to [Strava → My API Application](https://www.strava.com/settings/api).
+- Under **Authorization Callback Domain**, set:
+  - `running.andersonventuregroup.com`
+- Save. (Use only the domain, no `https://` or path.)
+
+**2. Vercel**
+
+- In the Vercel project: **Settings → Domains** → add **running.andersonventuregroup.com** (Vercel will show the DNS records to add).
+- **Settings → Environment Variables**: set **`NEXT_PUBLIC_APP_URL`** = `https://running.andersonventuregroup.com` (no trailing slash) for Production (and Preview if you want).
+- Redeploy after adding the domain and env var so the new URL is used for OAuth redirects.
+
+**3. DNS**
+
+- At your DNS provider (e.g. where andersonventuregroup.com is managed), add the record Vercel shows:
+  - Usually a **CNAME** for `running` (or `running.andersonventuregroup.com`) pointing to `cname.vercel-dns.com`, or
+  - The exact target is shown in Vercel **Settings → Domains** after you add the domain.
+- Wait for DNS to propagate (minutes to hours). Vercel will issue SSL for the custom domain once DNS is correct.
 
 ## Local dev
 
@@ -61,7 +85,7 @@ Open [http://localhost:3000/app](http://localhost:3000/app), enter your passkey,
 
 Strava requires the redirect URL to match your app settings. Do both:
 
-1. **NEXT_PUBLIC_APP_URL** — Set to your app’s full URL with **no trailing slash**, e.g. `https://ai-fitness-coach.vercel.app` or `http://localhost:3000`.
-2. **Strava API app** — [Strava → My API Application](https://www.strava.com/settings/api) → **Authorization Callback Domain**: enter **only the domain** (no `https://`, no path), e.g. `ai-fitness-coach.vercel.app` or `localhost`.
+1. **NEXT_PUBLIC_APP_URL** — Set to your app’s full URL with **no trailing slash**, e.g. `https://running.andersonventuregroup.com` or `http://localhost:3000`.
+2. **Strava API app** — [Strava → My API Application](https://www.strava.com/settings/api) → **Authorization Callback Domain**: enter **only the domain** (no `https://`, no path), e.g. `running.andersonventuregroup.com` or `localhost`.
 
 The app uses this callback URL: `{NEXT_PUBLIC_APP_URL}/api/auth/strava/callback`. The domain in that URL must match the Authorization Callback Domain in Strava.

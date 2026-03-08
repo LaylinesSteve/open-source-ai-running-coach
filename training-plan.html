@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Trail 50K · May 23, 2026</title>
+  <title>Trail 50K · Sample plan</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -580,8 +580,8 @@
     <div class="hero-bg"></div>
     <h1 class="font-display">50K</h1>
     <p class="sub">Trail</p>
-    <p class="date font-display">May 23, 2026</p>
-    <p class="weeks">11 Weeks · Mar 7 → May 23</p>
+    <p class="date font-display" id="heroDate">—</p>
+    <p class="weeks" id="heroWeeks">11 Weeks</p>
     <a href="/app" class="plan-cta">Make your own plan</a>
     <a href="#progress" class="scroll-hint" aria-label="Scroll to plan">Scroll</a>
   </header>
@@ -589,19 +589,7 @@
   <section class="progress-section" id="progress">
     <p class="section-label">Long run progression</p>
     <h2 class="section-title font-display">Build to race day</h2>
-    <div class="progress-grid">
-      <div class="progress-bar-wrap" data-week="1" data-mi="6" data-date="Mar 14"><div class="progress-bar" style="height: 21%;"></div><span class="progress-label">6 mi</span><span class="progress-date">Mar 14</span></div>
-      <div class="progress-bar-wrap" data-week="2" data-mi="8" data-date="Mar 21"><div class="progress-bar" style="height: 28%;"></div><span class="progress-label">8 mi</span><span class="progress-date">Mar 21</span></div>
-      <div class="progress-bar-wrap" data-week="3" data-mi="10" data-date="Mar 28"><div class="progress-bar" style="height: 35%;"></div><span class="progress-label">10 mi</span><span class="progress-date">Mar 28</span></div>
-      <div class="progress-bar-wrap" data-week="4" data-mi="11" data-date="Apr 4"><div class="progress-bar" style="height: 39%;"></div><span class="progress-label">11 mi</span><span class="progress-date">Apr 4</span></div>
-      <div class="progress-bar-wrap" data-week="5" data-mi="12" data-date="Apr 11"><div class="progress-bar" style="height: 43%;"></div><span class="progress-label">12 mi</span><span class="progress-date">Apr 11</span></div>
-      <div class="progress-bar-wrap" data-week="6" data-mi="14" data-date="Apr 18"><div class="progress-bar" style="height: 50%;"></div><span class="progress-label">14 mi</span><span class="progress-date">Apr 18</span></div>
-      <div class="progress-bar-wrap" data-week="7" data-mi="16" data-date="Apr 25"><div class="progress-bar" style="height: 57%;"></div><span class="progress-label">16 mi</span><span class="progress-date">Apr 25</span></div>
-      <div class="progress-bar-wrap" data-week="8" data-mi="18" data-date="May 2"><div class="progress-bar" style="height: 64%;"></div><span class="progress-label">18 mi</span><span class="progress-date">May 2</span></div>
-      <div class="progress-bar-wrap" data-week="9" data-mi="14" data-date="May 9"><div class="progress-bar taper" style="height: 50%;"></div><span class="progress-label">14 mi</span><span class="progress-date">May 9</span></div>
-      <div class="progress-bar-wrap" data-week="10" data-mi="8" data-date="May 16"><div class="progress-bar taper" style="height: 28%;"></div><span class="progress-label">8 mi</span><span class="progress-date">May 16</span></div>
-      <div class="progress-bar-wrap" data-week="11" data-mi="50K" data-date="May 23"><div class="progress-bar race" style="height: 100%;"></div><span class="progress-label">50K</span><span class="progress-date">May 23</span></div>
-    </div>
+    <div class="progress-grid" id="progressGrid"></div>
     <p style="text-align: center; margin-top: 2.5rem;">
       <a href="/app" class="plan-cta secondary">Make your own plan</a>
     </p>
@@ -639,7 +627,7 @@
   <section class="cta-section">
     <p class="section-label">Race day</p>
     <h2 class="section-title font-display">Trail 50K</h2>
-    <p class="date-big font-display">May 23</p>
+    <p class="date-big font-display" id="raceDateShort">—</p>
     <p>Saturday. Two-week taper. You’ve done this before.</p>
     <p style="margin-top: 2rem;">
       <a href="/app" class="plan-cta">Make your own plan</a>
@@ -647,139 +635,133 @@
   </section>
 
   <script>
-    const weeksData = [
-      { num: 1, range: 'Mar 7–13', miles: '~16 mi', phase: 'Base', longRun: '6 mi', runs: [
-        { day: 'Tue 3/10', dist: '4 mi', notes: 'Road or trail' },
-        { day: 'Thu 3/12', dist: '3 mi', notes: 'Or same day as CF' },
-        { day: 'Sat 3/14', dist: '6 mi', notes: 'Long run — easy, trail if possible', long: true },
-        { day: '+ 1–2 more', dist: '3–4 mi', notes: 'Optional easy or with CF day' }
-      ]},
-      { num: 2, range: 'Mar 14–20', miles: '~18 mi', phase: 'Build', longRun: '8 mi', runs: [
-        { day: 'Tue 3/17', dist: '4 mi', notes: '' },
-        { day: 'Thu 3/19', dist: '4 mi', notes: '' },
-        { day: 'Sat 3/21', dist: '8 mi', notes: 'Long run — trail', long: true },
-        { day: '+ 1 optional', dist: '2–3 mi', notes: 'Shakeout or skip' }
-      ]},
-      { num: 3, range: 'Mar 21–27', miles: '~20 mi', phase: 'Build', longRun: '10 mi', runs: [
-        { day: 'Tue 3/24', dist: '4 mi', notes: '' },
-        { day: 'Thu 3/26', dist: '4 mi', notes: '' },
-        { day: 'Sat 3/28', dist: '10 mi', notes: 'Long run — trail, first 10-miler', long: true },
-        { day: '+ 1 optional', dist: '2 mi', notes: 'Easy' }
-      ]},
-      { num: 4, range: 'Mar 28–Apr 3', miles: '~22 mi', phase: 'Build', longRun: '11 mi', runs: [
-        { day: 'Tue 3/31', dist: '5 mi', notes: '' },
-        { day: 'Thu 4/2', dist: '4 mi', notes: '' },
-        { day: 'Sat 4/4', dist: '11 mi', notes: 'Long run — trail', long: true },
-        { day: '+ 1 optional', dist: '2 mi', notes: '' }
-      ]},
-      { num: 5, range: 'Apr 4–10', miles: '~24 mi', phase: 'Build', longRun: '12 mi', runs: [
-        { day: 'Tue 4/7', dist: '5 mi', notes: '' },
-        { day: 'Thu 4/9', dist: '5 mi', notes: '' },
-        { day: 'Sat 4/11', dist: '12 mi', notes: 'Long run — trail', long: true },
-        { day: '+ 1 optional', dist: '2 mi', notes: '' }
-      ]},
-      { num: 6, range: 'Apr 11–17', miles: '~26 mi', phase: 'Build', longRun: '14 mi', runs: [
-        { day: 'Tue 4/14', dist: '5 mi', notes: '' },
-        { day: 'Thu 4/16', dist: '5 mi', notes: '' },
-        { day: 'Sat 4/18', dist: '14 mi', notes: 'Long run — trail, first half-marathon distance', long: true },
-        { day: '+ 1 optional', dist: '2 mi', notes: '' }
-      ]},
-      { num: 7, range: 'Apr 18–24', miles: '~28 mi', phase: 'Peak', longRun: '16 mi', runs: [
-        { day: 'Tue 4/21', dist: '5 mi', notes: '' },
-        { day: 'Thu 4/23', dist: '6 mi', notes: '' },
-        { day: 'Sat 4/25', dist: '16 mi', notes: 'Long run — trail, key confidence run', long: true },
-        { day: '+ 1 optional', dist: '1–2 mi', notes: '' }
-      ]},
-      { num: 8, range: 'Apr 25–May 1', miles: '~28 mi', phase: 'Peak', longRun: '18 mi', runs: [
-        { day: 'Tue 4/28', dist: '5 mi', notes: '' },
-        { day: 'Thu 4/30', dist: '5 mi', notes: '' },
-        { day: 'Sat 5/2', dist: '18 mi', notes: 'Long run — trail, peak long run', long: true },
-        { day: '+ 1 optional', dist: '0–2 mi', notes: '' }
-      ]},
-      { num: 9, range: 'May 2–8', miles: '~26 mi', phase: 'Last full week', longRun: '14 mi', runs: [
-        { day: 'Tue 5/5', dist: '5 mi', notes: '' },
-        { day: 'Thu 5/7', dist: '6 mi', notes: '' },
-        { day: 'Sat 5/9', dist: '14 mi', notes: 'Long run — trail, last big long run', long: true },
-        { day: 'Optional', dist: '1–2 mi', notes: '' }
-      ]},
-      { num: 10, range: 'May 9–15', miles: '~18 mi', phase: 'Taper 1', longRun: '8 mi', runs: [
-        { day: 'Tue 5/12', dist: '4 mi', notes: '' },
-        { day: 'Thu 5/14', dist: '4 mi', notes: '' },
-        { day: 'Sat 5/16', dist: '8 mi', notes: 'Long run — easy, last long before race', long: true },
-        { day: 'Optional', dist: '2 mi', notes: '' }
-      ]},
-      { num: 11, range: 'May 16–23', miles: '—', phase: 'Race week', longRun: '50K', runs: [
-        { day: 'Tue 5/19', dist: '3–4 mi', notes: 'Keep legs moving' },
-        { day: 'Thu 5/21', dist: '2–3 mi', notes: 'Optional' },
-        { day: 'Fri 5/22', dist: 'Rest', notes: 'Or 20 min walk' },
-        { day: 'Sat 5/23', dist: '50K', notes: 'Race day', long: true }
-      ], raceWeek: true }
-    ];
+    (function() {
+      const NUM_WEEKS = 11;
+      const now = new Date();
+      now.setHours(12, 0, 0, 0);
+      const dayOfWeek = now.getDay();
+      const thisMonday = new Date(now);
+      thisMonday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+      const planStart = new Date(thisMonday);
+      const raceSaturday = new Date(planStart);
+      raceSaturday.setDate(planStart.getDate() + NUM_WEEKS * 7 - 2);
 
-    const grid = document.getElementById('weeksGrid');
-    weeksData.forEach((week, i) => {
-      const card = document.createElement('div');
-      card.className = 'week-card' + (week.raceWeek ? ' race-week' : '');
-      card.style.animationDelay = `${0.05 * i}s`;
-      card.innerHTML = `
-        <div class="week-card-header">
-          <div>
-            <div class="week-num">Week ${week.num}</div>
-            <div class="week-range">${week.range}</div>
-          </div>
-          <div class="week-meta">
-            <span class="week-miles">${week.miles}</span>
-            <span class="week-phase">${week.phase}</span>
-            <span class="week-chevron">▼</span>
-          </div>
-        </div>
-        <div class="week-body">
-          <div class="week-body-inner">
-            <div class="week-runs">
-              ${week.runs.map(r => `
-                <div class="run-row ${r.long ? 'long' : ''}">
-                  <span class="run-day">${r.day}</span>
-                  <span class="run-dist">${r.dist}</span>
-                  <span class="run-notes">${r.notes}</span>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-      const header = card.querySelector('.week-card-header');
-      header.addEventListener('click', () => {
-        card.classList.toggle('open');
-      });
-      grid.appendChild(card);
-    });
+      function fmtShort(d) {
+        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      function fmtLong(d) {
+        return d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      }
+      function fmtDay(d) {
+        return d.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + (d.getMonth() + 1) + '/' + d.getDate();
+      }
 
-    // Scroll animations
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) entry.target.classList.add('visible');
-      });
-    }, { rootMargin: '-10% 0px -10% 0px', threshold: 0 });
+      document.getElementById('heroDate').textContent = fmtLong(raceSaturday);
+      document.getElementById('heroWeeks').textContent = NUM_WEEKS + ' Weeks · ' + fmtShort(planStart) + ' → ' + fmtShort(raceSaturday);
+      document.title = 'Trail 50K · ' + fmtLong(raceSaturday);
+      document.getElementById('raceDateShort').textContent = fmtShort(raceSaturday);
+      document.getElementById('footerYear').textContent = raceSaturday.getFullYear();
 
-    document.querySelectorAll('section').forEach(s => observer.observe(s));
+      const progressMiles = [6, 8, 10, 11, 12, 14, 16, 18, 14, 8, '50K'];
+      const progressHeights = [21, 28, 35, 39, 43, 50, 57, 64, 50, 28, 100];
+      const progressClasses = ['', '', '', '', '', '', '', '', 'taper', 'taper', 'race'];
+      const progressGrid = document.getElementById('progressGrid');
+      progressGrid.innerHTML = progressMiles.map((mi, i) => {
+        const weekMon = new Date(planStart);
+        weekMon.setDate(planStart.getDate() + i * 7);
+        const sat = new Date(weekMon);
+        sat.setDate(weekMon.getDate() + 5);
+        const dateStr = fmtShort(sat);
+        const label = mi === '50K' ? '50K' : mi + ' mi';
+        const barClass = progressClasses[i] ? ' ' + progressClasses[i] : '';
+        return '<div class="progress-bar-wrap" data-week="' + (i + 1) + '" data-mi="' + label + '" data-date="' + dateStr + '"><div class="progress-bar' + barClass + '" style="height: ' + progressHeights[i] + '%;"></div><span class="progress-label">' + label + '</span><span class="progress-date">' + dateStr + '</span></div>';
+      }).join('');
 
-    // Click progress bar → scroll to week card and open it
-    document.querySelectorAll('.progress-bar-wrap').forEach((wrap, i) => {
-      wrap.addEventListener('click', () => {
-        const cards = document.querySelectorAll('.week-card');
-        const card = cards[i];
-        if (card) {
-          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          setTimeout(() => {
-            card.classList.add('open');
-          }, 400);
+      const phaseNames = ['Base', 'Build', 'Build', 'Build', 'Build', 'Build', 'Peak', 'Peak', 'Last full week', 'Taper 1', 'Race week'];
+      const milesStr = ['~16 mi', '~18 mi', '~20 mi', '~22 mi', '~24 mi', '~26 mi', '~28 mi', '~28 mi', '~26 mi', '~18 mi', '—'];
+      const longRuns = ['6 mi', '8 mi', '10 mi', '11 mi', '12 mi', '14 mi', '16 mi', '18 mi', '14 mi', '8 mi', '50K'];
+      const runTemplates = [
+        [ { dist: '4 mi', notes: 'Road or trail' }, { dist: '3 mi', notes: 'Or same day as CF' }, { dist: '6 mi', notes: 'Long run — easy, trail if possible', long: true }, { day: '+ 1–2 more', dist: '3–4 mi', notes: 'Optional easy or with CF day' } ],
+        [ { dist: '4 mi', notes: '' }, { dist: '4 mi', notes: '' }, { dist: '8 mi', notes: 'Long run — trail', long: true }, { day: '+ 1 optional', dist: '2–3 mi', notes: 'Shakeout or skip' } ],
+        [ { dist: '4 mi', notes: '' }, { dist: '4 mi', notes: '' }, { dist: '10 mi', notes: 'Long run — trail, first 10-miler', long: true }, { day: '+ 1 optional', dist: '2 mi', notes: 'Easy' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '4 mi', notes: '' }, { dist: '11 mi', notes: 'Long run — trail', long: true }, { day: '+ 1 optional', dist: '2 mi', notes: '' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '5 mi', notes: '' }, { dist: '12 mi', notes: 'Long run — trail', long: true }, { day: '+ 1 optional', dist: '2 mi', notes: '' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '5 mi', notes: '' }, { dist: '14 mi', notes: 'Long run — trail, first half-marathon distance', long: true }, { day: '+ 1 optional', dist: '2 mi', notes: '' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '6 mi', notes: '' }, { dist: '16 mi', notes: 'Long run — trail, key confidence run', long: true }, { day: '+ 1 optional', dist: '1–2 mi', notes: '' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '5 mi', notes: '' }, { dist: '18 mi', notes: 'Long run — trail, peak long run', long: true }, { day: '+ 1 optional', dist: '0–2 mi', notes: '' } ],
+        [ { dist: '5 mi', notes: '' }, { dist: '6 mi', notes: '' }, { dist: '14 mi', notes: 'Long run — trail, last big long run', long: true }, { day: 'Optional', dist: '1–2 mi', notes: '' } ],
+        [ { dist: '4 mi', notes: '' }, { dist: '4 mi', notes: '' }, { dist: '8 mi', notes: 'Long run — easy, last long before race', long: true }, { day: 'Optional', dist: '2 mi', notes: '' } ],
+        [ { dist: '3–4 mi', notes: 'Keep legs moving' }, { dist: '2–3 mi', notes: 'Optional' }, { day: 'Fri', dist: 'Rest', notes: 'Or 20 min walk' }, { dist: '50K', notes: 'Race day', long: true } ]
+      ];
+
+      const weeksData = [];
+      for (let i = 0; i < NUM_WEEKS; i++) {
+        const weekMon = new Date(planStart);
+        weekMon.setDate(planStart.getDate() + i * 7);
+        const weekSun = new Date(weekMon);
+        weekSun.setDate(weekMon.getDate() + 6);
+        const range = fmtShort(weekMon) + '–' + (weekMon.getMonth() === weekSun.getMonth() ? weekSun.getDate() : fmtShort(weekSun));
+        const runs = [];
+        const tpl = runTemplates[i];
+        if (i < 10) {
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 86400000)), dist: tpl[0].dist, notes: tpl[0].notes, long: false });
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 3 * 86400000)), dist: tpl[1].dist, notes: tpl[1].notes, long: false });
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 5 * 86400000)), dist: tpl[2].dist, notes: tpl[2].notes, long: tpl[2].long });
+          runs.push({ day: tpl[3].day || fmtDay(new Date(weekMon.getTime() + 6 * 86400000)), dist: tpl[3].dist, notes: tpl[3].notes, long: false });
+        } else {
+          const fri = new Date(weekMon);
+          fri.setDate(weekMon.getDate() + 4);
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 86400000)), dist: tpl[0].dist, notes: tpl[0].notes, long: false });
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 3 * 86400000)), dist: tpl[1].dist, notes: tpl[1].notes, long: false });
+          runs.push({ day: fmtDay(fri), dist: tpl[2].dist, notes: tpl[2].notes, long: false });
+          runs.push({ day: fmtDay(new Date(weekMon.getTime() + 5 * 86400000)), dist: tpl[3].dist, notes: tpl[3].notes, long: true });
         }
+        weeksData.push({
+          num: i + 1,
+          range: range,
+          miles: milesStr[i],
+          phase: phaseNames[i],
+          longRun: longRuns[i],
+          runs: runs,
+          raceWeek: i === NUM_WEEKS - 1
+        });
+      }
+
+      const grid = document.getElementById('weeksGrid');
+      weeksData.forEach((week, i) => {
+        const card = document.createElement('div');
+        card.className = 'week-card' + (week.raceWeek ? ' race-week' : '');
+        card.style.animationDelay = (0.05 * i) + 's';
+        card.innerHTML = '<div class="week-card-header"><div><div class="week-num">Week ' + week.num + '</div><div class="week-range">' + week.range + '</div></div><div class="week-meta"><span class="week-miles">' + week.miles + '</span><span class="week-phase">' + week.phase + '</span><span class="week-chevron">▼</span></div></div><div class="week-body"><div class="week-body-inner"><div class="week-runs">' + week.runs.map(function(r) {
+          return '<div class="run-row ' + (r.long ? 'long' : '') + '"><span class="run-day">' + r.day + '</span><span class="run-dist">' + r.dist + '</span><span class="run-notes">' + r.notes + '</span></div>';
+        }).join('') + '</div></div></div>';
+        const header = card.querySelector('.week-card-header');
+        header.addEventListener('click', function() { card.classList.toggle('open'); });
+        grid.appendChild(card);
       });
-    });
+
+      const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) entry.target.classList.add('visible');
+        });
+      }, { rootMargin: '-10% 0px -10% 0px', threshold: 0 });
+      document.querySelectorAll('section').forEach(function(s) { observer.observe(s); });
+
+      document.querySelectorAll('.progress-bar-wrap').forEach(function(wrap, i) {
+        wrap.addEventListener('click', function() {
+          const cards = document.querySelectorAll('.week-card');
+          const card = cards[i];
+          if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(function() { card.classList.add('open'); }, 400);
+          }
+        });
+      });
+    })();
   </script>
   <footer style="margin-top: auto; padding: 2rem 1.5rem; background: var(--bg); border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.8rem; text-align: center; line-height: 1.6;">
     <p style="margin-bottom: 0.5rem; font-style: italic;">Consult your physician before starting any training plan or exercise program.</p>
-    <p style="margin-bottom: 0.25rem;">© 2026 Anderson Venture Group LLC. All rights reserved.</p>
+    <p style="margin-bottom: 0.25rem;">© <span id="footerYear">2026</span> Anderson Venture Group LLC. All rights reserved.</p>
     <p>Contact us with feedback at <a href="mailto:steve@andersonventuregroup.com" style="color: var(--accent); text-decoration: none;">steve@andersonventuregroup.com</a></p>
   </footer>
 </body>
