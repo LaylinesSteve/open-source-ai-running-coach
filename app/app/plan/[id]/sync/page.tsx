@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getPlan } from '@/lib/store';
 import Link from 'next/link';
 import SyncButton from './SyncButton';
+import AddRunButton from '../AddRunButton';
 
 function formatDuration(sec?: number): string {
   if (sec == null) return '';
@@ -60,20 +61,22 @@ export default async function SyncPage({
         All runs synced from Strava appear here and in your plan's weekly view. Sync to pull in new activities.
       </p>
 
-      {!hasStrava ? (
-        <p style={{ color: '#737373' }}>This plan doesn’t have Strava connected. Connect Strava when creating a plan to use this feature.</p>
-      ) : (
-        <>
-          <SyncButton planId={id} />
-          {lastSyncAt && syncResult && (
-            <p style={{ marginTop: '1rem', color: '#737373', fontSize: '0.9rem' }}>
+      {!hasStrava && (
+        <p style={{ color: '#737373', marginBottom: '1rem' }}>This plan doesn't have Strava connected. You can still add runs manually below.</p>
+      )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: '1rem' }}>
+        {hasStrava && <SyncButton planId={id} />}
+        <AddRunButton planId={id} />
+      </div>
+      {hasStrava && lastSyncAt && syncResult && (
+            <p style={{ marginBottom: '1rem', color: '#737373', fontSize: '0.9rem' }}>
               Last synced {new Date(lastSyncAt).toLocaleString()} — {syncResult.summary}
             </p>
-          )}
+      )}
 
           <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2.5rem', marginBottom: '0.75rem' }}>Run log</h2>
           {runLog.length === 0 ? (
-            <p style={{ color: '#737373', fontSize: '0.9rem' }}>No runs logged yet. Click &quot;Update with recent Strava training&quot; to sync.</p>
+            <p style={{ color: '#737373', fontSize: '0.9rem' }}>No runs yet. Sync Strava or add a run above.</p>
           ) : (
             <div style={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -84,11 +87,12 @@ export default async function SyncPage({
                     <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Run</th>
                     <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
                     <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
+                    <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>RPE</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {runLog.map((r) => (
-                    <tr key={r.stravaId} style={{ borderBottom: '1px solid #262626' }}>
+                  {runLog.map((r, i) => (
+                    <tr key={r.stravaId !== 0 ? r.stravaId : `manual-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
                       <td style={{ padding: '0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
                       <td style={{ padding: '0.75rem' }}>{r.weekNum}</td>
                       <td style={{ padding: '0.75rem' }}>
@@ -97,14 +101,13 @@ export default async function SyncPage({
                       </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', color: '#22c55e' }}>{r.distanceMi} mi</td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{r.perceivedIntensity != null ? r.perceivedIntensity : '—'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-        </>
-      )}
     </div>
   );
 }

@@ -14,6 +14,16 @@ function formatDuration(sec?: number): string {
 
 function WeekCard({ week }: { week: MergedWeek }) {
   const cardClass = 'week-card' + (week.raceWeek ? ' race-week' : '');
+  const completedMi = week.runs
+    .filter((r) => r.actual != null)
+    .reduce((sum, r) => sum + r.actual!.distanceMi, 0);
+  const plannedNum = parseInt(week.miles.replace(/[^\d]/g, ''), 10) || 0;
+  const milesLabel =
+    plannedNum > 0
+      ? `${Math.round(completedMi * 10) / 10} of ${plannedNum} mi`
+      : week.miles;
+  const milesComplete = plannedNum > 0 && completedMi >= plannedNum;
+
   return (
     <div className={cardClass}>
       <details>
@@ -23,7 +33,12 @@ function WeekCard({ week }: { week: MergedWeek }) {
             <div className="week-range">{week.range}</div>
           </div>
           <div className="week-meta">
-            <span className="week-miles">{week.miles}</span>
+            <span
+              className="week-miles"
+              style={milesComplete ? { color: 'var(--success, #22c55e)' } : undefined}
+            >
+              {milesLabel}
+            </span>
             <span className="week-phase">{week.phase}</span>
             <span className="week-chevron">▼</span>
           </div>
@@ -37,7 +52,7 @@ function WeekCard({ week }: { week: MergedWeek }) {
                   ? `${r.actual.distanceMi} mi`
                   : r.planned?.dist ?? '';
                 const notes = r.actual != null
-                  ? [r.actual.name, formatDuration(r.actual.movingTimeSec), r.actual.note].filter(Boolean).join(' · ')
+                  ? [r.actual.name, formatDuration(r.actual.movingTimeSec), r.actual.perceivedIntensity != null ? `RPE ${r.actual.perceivedIntensity}` : null, r.actual.note].filter(Boolean).join(' · ')
                   : (r.planned?.notes ?? '');
                 const coachTip = r.planned?.coachTip?.trim();
                 return (

@@ -5,7 +5,7 @@ export interface MergedRun {
   dateStr: string;
   dayLabel: string;
   planned?: { dist: string; notes: string; long?: boolean; coachTip?: string };
-  actual?: { name: string; distanceMi: number; movingTimeSec?: number; elevationFt?: number; note?: string };
+  actual?: { name: string; distanceMi: number; movingTimeSec?: number; elevationFt?: number; perceivedIntensity?: number; note?: string };
 }
 
 export interface MergedWeek extends Omit<PlanWeek, 'runs'> {
@@ -84,6 +84,7 @@ export function mergeWeeksWithRunLog(
           distanceMi: r.distanceMi,
           movingTimeSec: r.movingTimeSec,
           elevationFt: r.elevationFt,
+          perceivedIntensity: r.perceivedIntensity,
           note: r.note,
         };
       } else {
@@ -95,6 +96,7 @@ export function mergeWeeksWithRunLog(
             distanceMi: r.distanceMi,
             movingTimeSec: r.movingTimeSec,
             elevationFt: r.elevationFt,
+            perceivedIntensity: r.perceivedIntensity,
             note: r.note,
           },
         });

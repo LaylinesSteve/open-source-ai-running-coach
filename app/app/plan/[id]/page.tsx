@@ -118,7 +118,7 @@ export default async function PlanPage({
       <PlanView html={planContentHtml} planId={id} />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       <PlanTips tips={tips} distance={distance} />
-      <SyncSection planId={id} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
+      <SyncSection planId={id} hasWeeksData={!!weeksData} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />
     </>
   );

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import AddRunButton from './AddRunButton';
 
 type SyncResult = {
   completed: { weekNum: number; dayLabel: string; planned: string; actualMi: number; date: string }[];
@@ -9,16 +10,18 @@ type SyncResult = {
 
 export default function SyncSection({
   planId,
+  hasWeeksData,
   hasStrava,
   lastSyncAt,
   syncResult,
 }: {
   planId: string;
+  hasWeeksData: boolean;
   hasStrava: boolean;
   lastSyncAt?: string;
   syncResult?: SyncResult | null;
 }) {
-  if (!hasStrava) return null;
+  if (!hasWeeksData) return null;
 
   const sectionStyle = {
     maxWidth: 720,
@@ -34,23 +37,28 @@ export default function SyncSection({
         Training log
       </p>
       <p style={{ color: '#a3a3a3', fontSize: '0.9rem', marginBottom: '1rem' }}>
-        Compare your Strava activities to the plan and track what you’ve completed.
+        Sync Strava or add runs manually. Completed miles show in each week.
       </p>
-      <Link
-        href={`/app/plan/${planId}/sync`}
-        style={{
-          display: 'inline-block',
-          padding: '12px 20px',
-          background: '#e85d04',
-          color: '#fff',
-          fontWeight: 600,
-          borderRadius: 8,
-          textDecoration: 'none',
-          fontSize: '0.9rem',
-        }}
-      >
-        Update with recent Strava training
-      </Link>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+        {hasStrava && (
+          <Link
+            href={`/app/plan/${planId}/sync`}
+            style={{
+              display: 'inline-block',
+              padding: '12px 20px',
+              background: '#e85d04',
+              color: '#fff',
+              fontWeight: 600,
+              borderRadius: 8,
+              textDecoration: 'none',
+              fontSize: '0.9rem',
+            }}
+          >
+            Update with recent Strava training
+          </Link>
+        )}
+        <AddRunButton planId={planId} />
+      </div>
       {lastSyncAt && syncResult && (
         <p style={{ marginTop: '1rem', color: '#737373', fontSize: '0.85rem' }}>
           Last synced: {new Date(lastSyncAt).toLocaleDateString()}. {syncResult.summary}

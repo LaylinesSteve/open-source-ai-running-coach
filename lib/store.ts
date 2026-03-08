@@ -61,7 +61,7 @@ export interface PlanRecord {
 }
 
 export interface LoggedRun {
-  stravaId: number;
+  stravaId: number; // 0 = manually added
   date: string; // YYYY-MM-DD
   weekNum: number;
   dayLabel: string;
@@ -69,6 +69,8 @@ export interface LoggedRun {
   distanceMi: number;
   movingTimeSec?: number;
   elevationFt?: number;
+  /** Perceived intensity 1–10 (optional, for manual runs). */
+  perceivedIntensity?: number;
   /** Note about the run (e.g. matched planned, adaptation note). */
   note?: string;
 }
