@@ -199,7 +199,7 @@ export default function HomePage() {
                 transition: 'opacity 0.7s ease 0.35s, transform 0.7s ease 0.35s',
               }}
             >
-              Built from your goal, your date, and your Strava. Show up ready.
+              Free, personalized plans from your goal, your date, and your Strava. Show up ready.
             </p>
             <div
               style={{
@@ -257,7 +257,7 @@ export default function HomePage() {
                 transition: 'opacity 0.7s ease 0.55s',
               }}
             >
-              Takes under a minute · Connect Strava to personalize
+              Free · Takes under a minute · Connect Strava to personalize
             </p>
             {/* Easter egg 2: click "run" twice */}
             <p
