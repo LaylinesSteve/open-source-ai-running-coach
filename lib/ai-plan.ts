@@ -33,9 +33,9 @@ export function buildStravaSummary(activities: StravaActivity[]): string {
   if (runs.length === 0) return 'No running activities in Strava.';
 
   const now = new Date();
-  const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-  const recent = runs.filter((r) => new Date(r.start_date) >= ninetyDaysAgo);
-  if (recent.length === 0) return 'No runs in the last 90 days.';
+  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+  const recent = runs.filter((r) => new Date(r.start_date) >= sixMonthsAgo);
+  if (recent.length === 0) return 'No runs in the last 6 months.';
 
   const byWeek = new Map<string, { count: number; miles: number; longest: number }>();
   for (const r of recent) {
@@ -53,10 +53,10 @@ export function buildStravaSummary(activities: StravaActivity[]): string {
 
   const sortedWeeks = [...byWeek.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const lines: string[] = [
-    `Total runs (last 90 days): ${recent.length}.`,
+    `Total runs (last 6 months): ${recent.length}.`,
     `Weekly summary (week starting Monday):`,
   ];
-  for (const [weekStart, { count, miles, longest }] of sortedWeeks.slice(-12)) {
+  for (const [weekStart, { count, miles, longest }] of sortedWeeks.slice(-26)) {
     lines.push(`  ${weekStart}: ${count} runs, ${miles.toFixed(1)} mi, longest run ${longest.toFixed(1)} mi`);
   }
   const totalMi = recent.reduce((s, r) => s + (r.distance ?? 0) / 1609.34, 0);
@@ -72,12 +72,20 @@ const PLAN_WEEK_JSON_SCHEMA = (n: number, distance: string) => `Each week must b
 - phase: string, e.g. "Base", "Build", "Peak", "Race week" (taper length/structure is up to you)
 - longRun: string, e.g. "6 mi" or "${distance}" for the final (race) week
 - raceWeek: boolean, true only for week ${n}
-- runs: array of { day: string (e.g. "Tue 3/10"), dist: string (e.g. "4 mi"), notes: string, long: boolean }
+- runs: array of { day: string, dist: string, notes: string, long: boolean, coachTip: string }
+  For EACH run include "coachTip": a short line (1-2 sentences) of what a professional coach would say—motivation, a concrete tip, or an idea (e.g. pace focus, form cue, mindset, fueling, terrain). Keep it specific to that run and the athlete's context.
   Typical week: Tue easy, Thu easy, Sat long run, + 1 optional. Race week: short runs Tue/Thu, Rest Fri, race Saturday.`;
+
+export interface PlanTip {
+  title: string;
+  description: string;
+  url?: string;
+}
 
 export interface GeneratePlanResult {
   weeks: PlanWeek[];
   coachSummary: string;
+  tips?: PlanTip[];
 }
 
 /** Generate a personalized training plan for the selected distance using Strava data and race info (Gemini). */
@@ -99,8 +107,9 @@ export async function generatePlanWithAI(
 - Each week: typically Tue easy, Thu easy, Sat long run, plus optional short run. Use "day" format like "Tue 3/10" with actual dates so the last Saturday is ${raceDateStr}.
 - If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
-- Also output a "coachSummary" key: a short paragraph (2-4 sentences) summarizing the athlete's recent training, how it informed the plan, and your overall approach (e.g. softer start, focus on long runs, taper).
-- Output ONLY a valid JSON object with keys "weeks" (array of exactly ${numWeeks} week objects) and "coachSummary" (string). No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
+- Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
+- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) } with personalized tips and useful links for this runner (based on distance, goal, context). Include at least 2 tips with real "url" links to quality training articles, race prep, or nutrition (use real URLs from trusted sources you know).
+- Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
 
   const raceContext = [
     `Race: ${plan.raceName}. Distance: ${distance}. Race date: ${raceDateStr} (Saturday).`,
@@ -117,7 +126,7 @@ export async function generatePlanWithAI(
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "2-4 sentences on their training and how the plan is tailored." } Use real dates (week ${numWeeks} Saturday = race day ${raceDateStr}). Each week: num, range, miles, phase, longRun, raceWeek, runs. Last week's longRun must be "${distance}" (race day). Tailor notes to the athlete's goal and context.`;
+Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ { "title": "...", "description": "...", "url": "..." optional } ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips with at least 2 having real URLs.`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -153,7 +162,7 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
     else throw new Error('Could not parse AI response as JSON');
   }
 
-  const obj = parsed as { weeks?: PlanWeek[]; coachSummary?: string };
+  const obj = parsed as { weeks?: PlanWeek[]; coachSummary?: string; tips?: PlanTip[] };
   const rawWeeks = Array.isArray(parsed) ? parsed : obj.weeks ?? null;
   if (!rawWeeks || rawWeeks.length < 1) {
     throw new Error('AI did not return any weeks');
@@ -170,16 +179,23 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
     phase: String(w.phase ?? ''),
     longRun: i === n - 1 ? raceLabel : String(w.longRun ?? ''),
     raceWeek: i === n - 1,
-    runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean }[]).map((r) => ({
+    runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean; coachTip?: string }[]).map((r) => ({
       day: String(r.day ?? ''),
       dist: String(r.dist ?? ''),
       notes: String(r.notes ?? ''),
       long: Boolean(r.long),
+      coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
   }));
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : '';
-  return { weeks: normalized, coachSummary };
+  const rawTips = Array.isArray(obj.tips) ? obj.tips : [];
+  const tips: PlanTip[] = rawTips.slice(0, 8).map((t: { title?: string; description?: string; url?: string }) => ({
+    title: String(t?.title ?? '').trim() || 'Tip',
+    description: String(t?.description ?? '').trim() || '',
+    url: typeof t?.url === 'string' && t.url.trim() ? t.url.trim() : undefined,
+  })).filter((t) => t.description);
+  return { weeks: normalized, coachSummary, tips };
 }
 
 /** Revise the plan based on user feedback; returns updated weeks and coach summary. */
@@ -216,7 +232,7 @@ ${currentPlanJson}
 
 Athlete's revision request: ${userRequest}
 
-Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Keep real dates; last week Saturday = race day. Last week's longRun must be "${distance}".`;
+Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day, dist, notes, long, and coachTip (1-2 sentences of coach voice: motivation, tip, or idea). Keep real dates; last week's longRun must be "${distance}".`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -265,11 +281,12 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Keep real dates; last 
     phase: String(w.phase ?? ''),
     longRun: i === n - 1 ? raceLabel : String(w.longRun ?? ''),
     raceWeek: i === n - 1,
-    runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean }[]).map((r) => ({
+    runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean; coachTip?: string }[]).map((r) => ({
       day: String(r.day ?? ''),
       dist: String(r.dist ?? ''),
       notes: String(r.notes ?? ''),
       long: Boolean(r.long),
+      coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
   }));
 

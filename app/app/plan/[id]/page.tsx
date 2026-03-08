@@ -9,7 +9,15 @@ import {
 import { fetchStravaActivities } from '@/lib/strava';
 import PlanView from './PlanView';
 import PlanSummary from './PlanSummary';
+import PlanHero from './PlanHero';
+import PlanTips from './PlanTips';
+import SyncSection from './SyncSection';
 import RevisionForm from './RevisionForm';
+
+/** Remove the hero block from stored plan HTML so we show our own hero first. */
+function stripHeroFromPlanHtml(html: string): string {
+  return html.replace(/<header class="hero">[\s\S]*?<\/header>\s*/i, '');
+}
 
 export default async function PlanPage({
   params,
@@ -28,6 +36,7 @@ export default async function PlanPage({
   let stravaSummaryText = plan.stravaSummaryText;
   let coachSummary = plan.coachSummary;
   let weeksData = plan.weeksData;
+  let tips = plan.tips;
 
   if (!html) {
     let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
@@ -42,6 +51,7 @@ export default async function PlanPage({
           const result = await generatePlanWithAI(plan, stravaSummary);
           weeks = result.weeks;
           coachSummary = result.coachSummary || undefined;
+          tips = result.tips?.length ? result.tips : undefined;
         }
       } catch {
         weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
@@ -56,13 +66,22 @@ export default async function PlanPage({
       stravaSummaryText: stravaSummaryText || undefined,
       coachSummary: coachSummary || undefined,
       weeksData,
+      tips: tips || undefined,
     });
   }
 
   const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary;
+  const planContentHtml = stripHeroFromPlanHtml(html);
+  const numWeeks = plan.weeks || 12;
 
   return (
     <>
+      <PlanHero
+        distance={distance}
+        raceDate={plan.raceDate}
+        weeks={numWeeks}
+        raceUrl={plan.raceUrl || undefined}
+      />
       {hasSummary && (
         <PlanSummary
           stravaSummaryText={stravaSummaryText}
@@ -74,7 +93,9 @@ export default async function PlanPage({
           distance={distance}
         />
       )}
-      <PlanView html={html} planId={id} />
+      <PlanView html={planContentHtml} planId={id} />
+      <PlanTips tips={tips} distance={distance} />
+      <SyncSection planId={id} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />
     </>
   );

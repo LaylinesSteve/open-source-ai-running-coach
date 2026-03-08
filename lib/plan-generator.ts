@@ -11,7 +11,7 @@ export interface PlanWeek {
   miles: string;
   phase: string;
   longRun: string;
-  runs: { day: string; dist: string; notes: string; long?: boolean }[];
+  runs: { day: string; dist: string; notes: string; long?: boolean; coachTip?: string }[];
   raceWeek?: boolean;
 }
 
@@ -102,21 +102,22 @@ export function generatePlanWeeks(raceDate: Date, distance: string = 'Marathon')
 
     const runs = isRaceWeek
       ? [
-          { day: runDay(addDays(sat, -4)), dist: '3–4 mi', notes: 'Keep legs moving', long: false },
-          { day: runDay(addDays(sat, -2)), dist: '2–3 mi', notes: 'Optional', long: false },
-          { day: runDay(addDays(sat, -1)), dist: 'Rest', notes: 'Or 20 min walk', long: false },
-          { day: runDay(sat), dist: raceWeekLabel, notes: 'Race day', long: true },
+          { day: runDay(addDays(sat, -4)), dist: '3–4 mi', notes: 'Keep legs moving', long: false, coachTip: '' },
+          { day: runDay(addDays(sat, -2)), dist: '2–3 mi', notes: 'Optional', long: false, coachTip: '' },
+          { day: runDay(addDays(sat, -1)), dist: 'Rest', notes: 'Or 20 min walk', long: false, coachTip: '' },
+          { day: runDay(sat), dist: raceWeekLabel, notes: 'Race day', long: true, coachTip: '' },
         ]
       : [
-          { day: runDay(tue), dist: longRuns[i] >= 10 ? '5 mi' : '4 mi', notes: '', long: false },
-          { day: runDay(thu), dist: longRuns[i] >= 12 ? '5 mi' : '4 mi', notes: '', long: false },
+          { day: runDay(tue), dist: longRuns[i] >= 10 ? '5 mi' : '4 mi', notes: '', long: false, coachTip: '' },
+          { day: runDay(thu), dist: longRuns[i] >= 12 ? '5 mi' : '4 mi', notes: '', long: false, coachTip: '' },
           {
             day: runDay(sat),
             dist: longRun,
             notes: i === 0 ? 'Long run — easy' : i === numWeeks - 2 ? 'Long run — easy, last long before race' : 'Long run',
             long: true,
+            coachTip: '',
           },
-          { day: i < numWeeks - 2 ? '+ 1 optional' : 'Optional', dist: '2–3 mi', notes: '', long: false },
+          { day: i < numWeeks - 2 ? '+ 1 optional' : 'Optional', dist: '2–3 mi', notes: '', long: false, coachTip: '' },
         ];
 
     weeks.push({
@@ -216,14 +217,16 @@ export function planWeeksToHtml(
     .week-chevron { color: var(--text-muted); transition: transform 0.2s; }
     .week-card.open .week-chevron { transform: rotate(180deg); color: var(--accent); }
     .week-body { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
-    .week-card.open .week-body { max-height: 400px; }
+    .week-card.open .week-body { max-height: 600px; }
     .week-body-inner { padding: 0 1.25rem 1.25rem; border-top: 1px solid var(--border); }
-    .run-row { display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+    .run-row { padding: 0.5rem 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
     .run-row:last-child { border-bottom: none; }
+    .run-row-top { display: flex; align-items: flex-start; gap: 0.75rem; }
     .run-day { font-weight: 600; color: var(--text-muted); min-width: 85px; }
     .run-dist { font-weight: 600; color: var(--accent); }
     .run-row.long .run-dist { color: var(--accent-bright); }
     .run-notes { color: var(--text-muted); font-size: 0.8rem; }
+    .run-coach-tip { margin-top: 0.35rem; padding-left: 0.5rem; border-left: 3px solid var(--accent); color: var(--text-muted); font-size: 0.8rem; font-style: italic; line-height: 1.4; }
     .cta-section { text-align: center; padding: 4rem 1.5rem; background: var(--surface); }
     .cta-section .date-big { font-size: clamp(2.5rem, 8vw, 4rem); color: var(--accent); margin: 1rem 0; }
     @media (max-width: 768px) { .progress-grid { grid-template-columns: repeat(6, 1fr); height: 280px; } }
@@ -261,7 +264,7 @@ export function planWeeksToHtml(
     weeksData.forEach(function(week) {
       const card = document.createElement('div');
       card.className = 'week-card' + (week.raceWeek ? ' race-week' : '');
-      card.innerHTML = '<div class="week-card-header"><div><div class="week-num">Week ' + week.num + '</div><div class="week-range">' + week.range + '</div></div><div class="week-meta"><span class="week-miles">' + week.miles + '</span><span class="week-phase">' + week.phase + '</span><span class="week-chevron">▼</span></div></div><div class="week-body"><div class="week-body-inner"><div class="week-runs">' + week.runs.map(function(r) { return '<div class="run-row ' + (r.long ? 'long' : '') + '"><span class="run-day">' + r.day + '</span><span class="run-dist">' + r.dist + '</span><span class="run-notes">' + (r.notes || '') + '</span></div>'; }).join('') + '</div></div></div></div>';
+      card.innerHTML = '<div class="week-card-header"><div><div class="week-num">Week ' + week.num + '</div><div class="week-range">' + week.range + '</div></div><div class="week-meta"><span class="week-miles">' + week.miles + '</span><span class="week-phase">' + week.phase + '</span><span class="week-chevron">▼</span></div></div><div class="week-body"><div class="week-body-inner"><div class="week-runs">' + week.runs.map(function(r) { var tip = (r.coachTip || '').trim(); return '<div class="run-row ' + (r.long ? 'long' : '') + '"><div class="run-row-top"><span class="run-day">' + r.day + '</span><span class="run-dist">' + r.dist + '</span><span class="run-notes">' + (r.notes || '') + '</span></div>' + (tip ? '<div class="run-coach-tip">' + tip.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' : '') + '</div>'; }).join('') + '</div></div></div></div>';
       card.querySelector('.week-card-header').addEventListener('click', function() { card.classList.toggle('open'); });
       grid.appendChild(card);
     });

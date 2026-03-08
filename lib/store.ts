@@ -27,6 +27,17 @@ export interface PlanRecord {
   coachSummary?: string;
   /** Stored plan weeks for revision flow. */
   weeksData?: PlanWeek[];
+  /** Personalized tips (from AI or defaults). */
+  tips?: { title: string; description: string; url?: string }[];
+  /** Last Strava sync (ISO date). */
+  lastSyncAt?: string;
+  /** Result of comparing Strava activities to plan. */
+  syncResult?: {
+    completed: { weekNum: number; dayLabel: string; planned: string; actualMi: number; date: string }[];
+    totalPlanned: number;
+    totalCompleted: number;
+    summary: string;
+  };
 }
 
 const PREFIX = 'plan:';

@@ -79,12 +79,20 @@ export async function refreshStravaToken(
   };
 }
 
-export async function fetchStravaActivities(accessToken: string, perPage = 100): Promise<StravaActivity[]> {
+export async function fetchStravaActivities(
+  accessToken: string,
+  perPage = 100,
+  options?: { after?: number; before?: number }
+): Promise<StravaActivity[]> {
   const activities: StravaActivity[] = [];
   let page = 1;
+  const params = new URLSearchParams({ per_page: String(perPage), page: '1' });
+  if (options?.after != null) params.set('after', String(options.after));
+  if (options?.before != null) params.set('before', String(options.before));
   while (true) {
+    params.set('page', String(page));
     const res = await fetch(
-      `${STRAVA_API}/athlete/activities?per_page=${perPage}&page=${page}`,
+      `${STRAVA_API}/athlete/activities?${params.toString()}`,
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );
     if (!res.ok) break;
