@@ -728,6 +728,7 @@
       }
 
       const grid = document.getElementById('weeksGrid');
+      const weeksSection = document.getElementById('weeks');
       weeksData.forEach((week, i) => {
         const card = document.createElement('div');
         card.className = 'week-card' + (week.raceWeek ? ' race-week' : '');
@@ -739,6 +740,9 @@
         header.addEventListener('click', function() { card.classList.toggle('open'); });
         grid.appendChild(card);
       });
+
+      // Make weeks visible immediately so cards don't disappear when expanding (observer only adds, never removes)
+      if (weeksSection) weeksSection.classList.add('visible');
 
       const observer = new IntersectionObserver(function(entries) {
         entries.forEach(function(entry) {

@@ -1,6 +1,8 @@
 'use client';
 
-export default function PlanView({ html, planId }: { html: string; planId: string }) {
+import React from 'react';
+
+function PlanView({ html, planId }: { html: string; planId: string }) {
   return (
     <div style={{ position: 'relative' }}>
       <a
@@ -27,3 +29,6 @@ export default function PlanView({ html, planId }: { html: string; planId: strin
     </div>
   );
 }
+
+// Prevent re-renders when content unchanged so expanding a week doesn't reset the DOM
+export default React.memo(PlanView, (prev, next) => prev.planId === next.planId && prev.html.length === next.html.length && prev.html === next.html);
