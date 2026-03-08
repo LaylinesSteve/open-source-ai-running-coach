@@ -1,17 +1,13 @@
 # AI Fitness Coach
 
-Trail 50K training plan generator: your plan at `/`, and a passkey-protected flow so others can connect Strava, enter their race, and get a generated plan.
+Trail 50K training plan generator: your plan at `/`, and a flow to connect Strava, enter your race, and get a generated plan.
 
 ## What’s in the repo
 
 - **`/`** (and **`/training-plan.html`**) — Static training plan (May 23, 2026 example).
-- **`/app`** — Passkey gate. Users enter your shared passkey to continue.
+- **`/app`** — Same landing as `/`.
 - **`/app/form`** — Form: race name, race date, link to race, optional “Connect Strava”. Submit → create plan → redirect to Strava (if checked) or to their plan page.
 - **`/app/plan/[id]`** — Generated 11-week plan for that user (shareable link). If they connected Strava, an AI uses their running history to personalize the plan; otherwise it’s generated from race date only.
-
-## Passkey
-
-Set **`PASSKEY`** in your environment (e.g. Vercel env vars). Anyone with that passkey can open `/app`, submit the form, and get a plan. Plan URLs (`/app/plan/xyz`) are public so they can bookmark or share.
 
 ## Environment variables
 
@@ -19,7 +15,6 @@ Copy **`.env.example`** to **`.env`** and fill in:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `PASSKEY` | Yes | Secret string users enter to access `/app`. |
 | `STRAVA_CLIENT_ID` | Yes (for Strava) | From [Strava API](https://www.strava.com/settings/api). |
 | `STRAVA_CLIENT_SECRET` | Yes (for Strava) | From Strava API. |
 | `NEXT_PUBLIC_APP_URL` | Yes (prod) | Your app URL, e.g. `https://running.andersonventuregroup.com` (for OAuth redirect). |
@@ -27,7 +22,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `KV_REST_API_TOKEN` | Yes | Upstash Redis REST token. |
 | `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.5-flash`). Override if the default is deprecated (e.g. `gemini-3-flash-preview`). |
-| `COOKIE_SECRET` | No | Optional; defaults to `PASSKEY` for the access cookie. |
+| `COOKIE_SECRET` | No | Optional; for cookie signing if needed. |
 
 ## What is KV? Storage (Redis)
 
@@ -75,11 +70,11 @@ To serve the app at **https://running.andersonventuregroup.com**:
 
 ```bash
 npm install
-cp .env.example .env   # fill in PASSKEY, KV_*, Strava, NEXT_PUBLIC_APP_URL
+cp .env.example .env   # fill in KV_*, Strava, NEXT_PUBLIC_APP_URL
 npm run dev
 ```
 
-Open [http://localhost:3000/app](http://localhost:3000/app), enter your passkey, then use the form.
+Open [http://localhost:3000/app](http://localhost:3000/app) or [http://localhost:3000/app/form](http://localhost:3000/app/form) to use the form.
 
 ### Strava “invalid redirect_uri”
 

@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasAccess } from '@/lib/auth';
 import { setPlan } from '@/lib/store';
 import { getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
-  const allowed = await hasAccess();
-  if (!allowed) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const body = await request.json().catch(() => ({}));
   const raceUrl = (body.raceUrl || '').trim();
   const raceName = (body.raceName || 'Marathon').trim();

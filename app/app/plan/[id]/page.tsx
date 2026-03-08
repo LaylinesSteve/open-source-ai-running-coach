@@ -13,10 +13,19 @@ import PlanHero from './PlanHero';
 import PlanTips from './PlanTips';
 import SyncSection from './SyncSection';
 import RevisionForm from './RevisionForm';
+import PlanWeeksPortal from './PlanWeeksPortal';
 
 /** Remove the hero block from stored plan HTML so we show our own hero first. */
 function stripHeroFromPlanHtml(html: string): string {
   return html.replace(/<header class="hero">[\s\S]*?<\/header>\s*/i, '');
+}
+
+/** Empty the weeks grid so we render week cards in React (avoids innerHTML reset on expand). */
+function stripWeeksGridContent(html: string): string {
+  return html.replace(
+    /(<div class="weeks-grid" id="weeksGrid">)\s*[\s\S]*?(\s*<\/div>\s*<\/section>\s*<section class="cta-section">)/,
+    '$1\n    $2'
+  );
 }
 
 export default async function PlanPage({
@@ -77,7 +86,9 @@ export default async function PlanPage({
   }
 
   const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary;
-  const planContentHtml = stripHeroFromPlanHtml(html);
+  const baseHtml = stripHeroFromPlanHtml(html);
+  const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
+  const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
   const numWeeks = plan.weeks || 12;
 
   return (
@@ -101,6 +112,7 @@ export default async function PlanPage({
         />
       )}
       <PlanView html={planContentHtml} planId={id} />
+      {weeksRenderedByReact && weeksData && weeksData.length > 0 && <PlanWeeksPortal weeks={weeksData} />}
       <PlanTips tips={tips} distance={distance} />
       <SyncSection planId={id} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />

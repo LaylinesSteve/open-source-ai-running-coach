@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { hasAccess } from '@/lib/auth';
 import { getStravaAuthUrl } from '@/lib/strava';
 
 export async function GET(request: NextRequest) {
-  const allowed = await hasAccess();
-  if (!allowed) {
-    return NextResponse.redirect(new URL('/app', request.url));
-  }
-
   const state = request.nextUrl.searchParams.get('state');
   if (!state) {
     return NextResponse.json({ error: 'Missing state (plan id)' }, { status: 400 });
