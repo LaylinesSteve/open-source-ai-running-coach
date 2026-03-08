@@ -10,8 +10,20 @@ export interface PlanRecord {
   weeks: number;
   firstName?: string;
   lastName?: string;
+  age?: number;
+  gender?: string;
   /** Race distance (e.g. "5K", "Marathon", "50K"). */
   distance?: string;
+  trainingDaysPerWeek?: number;
+  preferredDays?: string[];
+  crossTraining?: boolean;
+  crossTrainingType?: string;
+  currentWeeklyMiles?: string;
+  longRunDay?: string;
+  injuriesOrLimitations?: string;
+  preferredTimeOfDay?: string;
+  trailVsRoad?: string;
+  runThisDistanceBefore?: boolean;
   /** Why they're running (e.g. "First 50K", "PR / time goal"). */
   goal?: string;
   /** Target time if they have one (e.g. "under 7 hours", "6:30"). */

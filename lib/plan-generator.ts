@@ -213,9 +213,9 @@ export function planWeeksToHtml(
     .section-label { font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
     .section-title { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 2rem; }
     .progress-section { background: var(--surface); padding: 4rem 1.5rem; }
-    .progress-grid { display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 0.5rem; align-items: end; height: 240px; margin-top: 1.5rem; }
-    .progress-bar-wrap { display: flex; flex-direction: column; align-items: center; }
-    .progress-bar { width: 100%; min-height: 20px; background: linear-gradient(180deg, var(--accent) 0%, var(--accent-bright) 100%); border-radius: 4px 4px 0 0; }
+    .progress-grid { display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 0.5rem; align-items: stretch; height: 240px; margin-top: 1.5rem; }
+    .progress-bar-wrap { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+    .progress-bar { width: 100%; min-height: 8px; background: linear-gradient(180deg, var(--accent) 0%, var(--accent-bright) 100%); border-radius: 4px 4px 0 0; }
     .progress-bar.race { background: linear-gradient(180deg, var(--success) 0%, #4ade80 100%); }
     .progress-bar.taper { background: linear-gradient(180deg, var(--text-muted) 0%, #525252 100%); }
     .progress-label { margin-top: 0.5rem; font-size: 0.7rem; font-weight: 600; }

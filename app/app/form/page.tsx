@@ -16,8 +16,26 @@ function FormContent() {
   const [goal, setGoal] = useState('');
   const [targetTime, setTargetTime] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [trainingDaysPerWeek, setTrainingDaysPerWeek] = useState('');
+  const [preferredDays, setPreferredDays] = useState<string[]>([]);
+  const [crossTraining, setCrossTraining] = useState<'yes' | 'no' | ''>('');
+  const [crossTrainingType, setCrossTrainingType] = useState('');
+  const [currentWeeklyMiles, setCurrentWeeklyMiles] = useState('');
+  const [longRunDay, setLongRunDay] = useState('');
+  const [injuriesOrLimitations, setInjuriesOrLimitations] = useState('');
+  const [preferredTimeOfDay, setPreferredTimeOfDay] = useState('');
+  const [trailVsRoad, setTrailVsRoad] = useState('');
+  const [runThisDistanceBefore, setRunThisDistanceBefore] = useState<'yes' | 'no' | ''>('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const toggleDay = (day: string) => {
+    setPreferredDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  };
 
   useEffect(() => {
     const err = searchParams.get('error');
@@ -36,6 +54,8 @@ function FormContent() {
         body: JSON.stringify({
           firstName: firstName.trim() || undefined,
           lastName: lastName.trim() || undefined,
+          age: age.trim() ? parseInt(age, 10) : undefined,
+          gender: gender.trim() || undefined,
           raceUrl: raceUrl.trim(),
           raceName: raceName.trim() || 'Marathon',
           raceDate: raceDate.trim(),
@@ -43,6 +63,16 @@ function FormContent() {
           goal: goal.trim() || undefined,
           targetTime: targetTime.trim() || undefined,
           additionalInfo: additionalInfo.trim() || undefined,
+          trainingDaysPerWeek: trainingDaysPerWeek.trim() ? parseInt(trainingDaysPerWeek, 10) : undefined,
+          preferredDays: preferredDays.length ? preferredDays : undefined,
+          crossTraining: crossTraining === 'yes' ? true : crossTraining === 'no' ? false : undefined,
+          crossTrainingType: crossTraining === 'yes' ? crossTrainingType.trim() || undefined : undefined,
+          currentWeeklyMiles: currentWeeklyMiles.trim() || undefined,
+          longRunDay: longRunDay.trim() || undefined,
+          injuriesOrLimitations: injuriesOrLimitations.trim() || undefined,
+          preferredTimeOfDay: preferredTimeOfDay.trim() || undefined,
+          trailVsRoad: trailVsRoad.trim() || undefined,
+          runThisDistanceBefore: runThisDistanceBefore === 'yes' ? true : runThisDistanceBefore === 'no' ? false : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -125,6 +155,50 @@ function FormContent() {
               marginBottom: 16,
             }}
           />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Age (optional)
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={120}
+            value={age}
+            onChange={(e) => setAge(e.target.value)}
+            placeholder="e.g. 35"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Gender (optional)
+          </label>
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          >
+            <option value="">Prefer not to say</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+            <option value="Non-binary">Non-binary</option>
+            <option value="Other">Other</option>
+          </select>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Race name
           </label>
@@ -249,13 +323,243 @@ function FormContent() {
               marginBottom: 16,
             }}
           />
+          <div style={{ marginBottom: 16 }}>
+            <button
+              type="button"
+              onClick={() => setAdvancedOpen((o) => !o)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                background: 'transparent',
+                border: '1px solid #262626',
+                borderRadius: 8,
+                color: '#a3a3a3',
+                fontSize: '0.9rem',
+                padding: '10px 14px',
+                cursor: 'pointer',
+                width: '100%',
+              }}
+            >
+              <span style={{ transform: advancedOpen ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}>▶</span>
+              Advanced (optional)
+            </button>
+            {advancedOpen && (
+              <div style={{ marginTop: 16, padding: '16px 0 0', borderTop: '1px solid #262626' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  How many days per week do you plan to run?
+                </label>
+                <select
+                  value={trainingDaysPerWeek}
+                  onChange={(e) => setTrainingDaysPerWeek(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <option value="">Select</option>
+                  {[2, 3, 4, 5, 6, 7].map((n) => (
+                    <option key={n} value={n}>{n} days</option>
+                  ))}
+                </select>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 8, color: '#a3a3a3' }}>
+                  Best days for running (select all that apply)
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                  {DAYS.map((day) => (
+                    <label key={day} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.9rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={preferredDays.includes(day)}
+                        onChange={() => toggleDay(day)}
+                      />
+                      {day}
+                    </label>
+                  ))}
+                </div>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Preferred day for your long run?
+                </label>
+                <select
+                  value={longRunDay}
+                  onChange={(e) => setLongRunDay(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <option value="">Any</option>
+                  {DAYS.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Current or typical weekly mileage?
+                </label>
+                <input
+                  type="text"
+                  value={currentWeeklyMiles}
+                  onChange={(e) => setCurrentWeeklyMiles(e.target.value)}
+                  placeholder="e.g. 15–20 mi"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                />
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Preferred time of day to run?
+                </label>
+                <select
+                  value={preferredTimeOfDay}
+                  onChange={(e) => setPreferredTimeOfDay(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <option value="">Select</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                  <option value="Flexible">Flexible</option>
+                </select>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Trail vs road preference?
+                </label>
+                <select
+                  value={trailVsRoad}
+                  onChange={(e) => setTrailVsRoad(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <option value="">Select</option>
+                  <option value="Trail">Trail</option>
+                  <option value="Road">Road</option>
+                  <option value="Both">Both</option>
+                  <option value="No preference">No preference</option>
+                </select>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Have you run this distance before?
+                </label>
+                <select
+                  value={runThisDistanceBefore}
+                  onChange={(e) => setRunThisDistanceBefore(e.target.value as 'yes' | 'no' | '')}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 16,
+                  }}
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+                <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+                  Do you plan to include cross training?
+                </label>
+                <select
+                  value={crossTraining}
+                  onChange={(e) => setCrossTraining(e.target.value as 'yes' | 'no' | '')}
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    background: '#141414',
+                    border: '1px solid #262626',
+                    borderRadius: 8,
+                    color: '#f5f5f5',
+                    fontSize: 16,
+                    marginBottom: 8,
+                  }}
+                >
+                  <option value="">Select</option>
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
+                {crossTraining === 'yes' && (
+                  <input
+                    type="text"
+                    value={crossTrainingType}
+                    onChange={(e) => setCrossTrainingType(e.target.value)}
+                    placeholder="What type? e.g. cycling, swimming, strength"
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      background: '#141414',
+                      border: '1px solid #262626',
+                      borderRadius: 8,
+                      color: '#f5f5f5',
+                      fontSize: 16,
+                      marginBottom: 16,
+                      marginTop: 8,
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Any injuries or limitations we should know about?
+          </label>
+          <input
+            type="text"
+            value={injuriesOrLimitations}
+            onChange={(e) => setInjuriesOrLimitations(e.target.value)}
+            placeholder="e.g. knee sensitivity, asthma, none"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Anything else we should know?
           </label>
           <textarea
             value={additionalInfo}
             onChange={(e) => setAdditionalInfo(e.target.value)}
-            placeholder="Injuries, terrain preference, weekly schedule, etc."
+            placeholder="Weekly schedule, other context, etc."
             rows={3}
             style={{
               width: '100%',
