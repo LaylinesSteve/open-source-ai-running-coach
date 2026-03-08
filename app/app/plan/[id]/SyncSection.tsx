@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import AddRunButton from './AddRunButton';
+import AdaptButton from './AdaptButton';
 
 type SyncResult = {
   completed: { weekNum: number; dayLabel: string; planned: string; actualMi: number; date: string }[];
@@ -58,6 +59,7 @@ export default function SyncSection({
           </Link>
         )}
         <AddRunButton planId={planId} />
+        <AdaptButton planId={planId} />
       </div>
       {lastSyncAt && syncResult && (
         <p style={{ marginTop: '1rem', color: '#737373', fontSize: '0.85rem' }}>

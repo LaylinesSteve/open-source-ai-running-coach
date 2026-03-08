@@ -46,6 +46,7 @@ export default function AddRunButton({ planId }: { planId: string }) {
       setMiles('');
       setMinutes('');
       setIntensity('');
+      await fetch(`/api/plan/${planId}/adapt`, { method: 'POST' }).catch(() => {});
       router.refresh();
     } catch {
       setError('Something went wrong');

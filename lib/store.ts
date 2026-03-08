@@ -58,6 +58,14 @@ export interface PlanRecord {
   revisionRequests?: { at: string; request: string }[];
   /** History of coach summaries so the AI can maintain context across revisions/sync. */
   coachSummaryHistory?: { at: string; summary: string }[];
+  /** Coach note from progress adaptation (over/under training, recovery, encouragement). */
+  adaptationNote?: string;
+  /** When adaptation was last run (ISO date). */
+  adaptationAt?: string;
+  /** Suggested weekly adjustments from AI (e.g. reduce week 5 for recovery). */
+  adaptationSuggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
+  /** Week numbers (1-based) that have already shown the goal-celebration. */
+  celebratedWeekNumbers?: number[];
 }
 
 export interface LoggedRun {

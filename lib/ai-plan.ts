@@ -1,4 +1,4 @@
-import type { PlanRecord } from '@/lib/store';
+import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
 import { getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { refreshStravaToken, fetchStravaActivities, type StravaActivity } from '@/lib/strava';
@@ -312,4 +312,145 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : 'Plan updated based on your feedback.';
   return { weeks: normalized, coachSummary };
+}
+
+export interface AdaptPlanResult {
+  coachNote: string;
+  suggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
+}
+
+/** Build context string for adaptation: plan, current weeks, run log, sync summary. */
+export function buildAdaptationContext(
+  plan: PlanRecord,
+  weeksData: PlanWeek[],
+  runLog: LoggedRun[]
+): string {
+  const raceDate = new Date(plan.raceDate + 'T12:00:00');
+  const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const distance = plan.distance || 'Marathon';
+
+  const lines: string[] = [
+    '=== RACE & GOALS ===',
+    `Race: ${plan.raceName}. Distance: ${distance}. Race date: ${raceDateStr}.`,
+    plan.goal ? `Goal: ${plan.goal}.` : '',
+    plan.targetTime ? `Target time: ${plan.targetTime}.` : '',
+    plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : '',
+    '',
+    '=== CURRENT PLAN (weekly goals) ===',
+    ...weeksData.map((w) => `Week ${w.num} (${w.range}): ${w.miles} — ${w.phase}${w.raceWeek ? ' [RACE WEEK]' : ''}`),
+    '',
+    '=== COMPLETED RUNS (run log) ===',
+  ];
+
+  if (runLog.length === 0) {
+    lines.push('No runs logged yet.');
+  } else {
+    const byWeek = new Map<number, LoggedRun[]>();
+    for (const r of runLog) {
+      const list = byWeek.get(r.weekNum) ?? [];
+      list.push(r);
+      byWeek.set(r.weekNum, list);
+    }
+    const sortedWeeks = [...byWeek.entries()].sort((a, b) => a[0] - b[0]);
+    for (const [weekNum, runs] of sortedWeeks) {
+      const totalMi = runs.reduce((s, r) => s + r.distanceMi, 0);
+      const planned = weeksData.find((w) => w.num === weekNum);
+      const plannedMi = planned?.miles?.match(/\d+/) ? parseInt(planned.miles.replace(/\D/g, ''), 10) : null;
+      const vs = plannedMi != null ? ` (planned ~${plannedMi} mi)` : '';
+      lines.push(`Week ${weekNum}: ${runs.length} runs, ${Math.round(totalMi * 10) / 10} mi total${vs}`);
+      for (const r of runs.slice().sort((a, b) => a.date.localeCompare(b.date))) {
+        const timeStr = r.movingTimeSec != null ? `, ${Math.round(r.movingTimeSec / 60)} min` : '';
+        const rpeStr = r.perceivedIntensity != null ? `, RPE ${r.perceivedIntensity}` : '';
+        lines.push(`  ${r.date} ${r.name}: ${r.distanceMi} mi${timeStr}${rpeStr}`);
+      }
+    }
+  }
+
+  if (plan.lastSyncAt && plan.syncResult) {
+    lines.push('');
+    lines.push('=== SYNC SUMMARY ===');
+    lines.push(`${plan.syncResult.summary} (last sync: ${plan.lastSyncAt}).`);
+  }
+
+  return lines.filter((s) => s !== undefined).join('\n');
+}
+
+/** Use AI to assess progress, suggest weekly adjustments, and write a coach note (recovery or encouragement). */
+export async function adaptPlanWithAI(
+  plan: PlanRecord,
+  weeksData: PlanWeek[],
+  runLog: LoggedRun[]
+): Promise<AdaptPlanResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+  const context = buildAdaptationContext(plan, weeksData, runLog);
+  const distance = plan.distance || 'Marathon';
+  const numWeeks = weeksData.length;
+
+  const systemPrompt = `You are an expert running coach. You will be given context about an athlete's training plan and their actual completed runs (run log). Your job is to:
+
+1. Assess whether they are doing too much (need to ease off and recover), doing about right, or missing too much (need encouragement and practical tips to run a bit more).
+2. Adjust the weekly plan and weekly goals: suggest concrete changes to upcoming weeks (e.g. reduce mileage for recovery, or keep/build as planned, or gentle nudge to hit a bit more). Focus on successive weeks from now; consider overall progress toward the race.
+3. Write a short coach's note (2-4 sentences) that:
+   - If they are overdoing it: emphasize recovery, sleep, easy days; suggest backing off the next week(s) and state it clearly.
+   - If they are missing too much: encourage them without guilt; give 1-2 practical tips to run a bit more (e.g. one extra short run, or add 10 min to a run, or which run to prioritize).
+   - If they're on track: briefly affirm and any small tweak.
+
+Use the exact context provided. Do not invent runs or numbers. Output ONLY a valid JSON object with:
+- "coachNote": string (the 2-4 sentence note for the athlete)
+- "suggestedWeeks": optional array of { "weekNum": number, "suggestedMiles": string (e.g. "~22 mi"), "note": string } for upcoming weeks that should change (only include weeks you want to suggest a change for)`;
+
+  const userPrompt = `Context (use this as the single source of truth):
+
+${context}
+
+Race: ${plan.raceName}. ${distance}. Race date: ${plan.raceDate}.
+
+Provide your assessment and coach note. Return JSON: { "coachNote": "...", "suggestedWeeks": [ ... ] }.`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error: ${err}`);
+  }
+
+  const data = await res.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!content) throw new Error('Empty response from Gemini');
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Could not parse AI adaptation response as JSON');
+  }
+
+  const obj = parsed as { coachNote?: string; suggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[] };
+  const coachNote = typeof obj.coachNote === 'string' ? obj.coachNote.trim() : 'Keep building consistency.';
+  const suggestedWeeks = Array.isArray(obj.suggestedWeeks)
+    ? obj.suggestedWeeks
+        .filter((w: { weekNum?: number }) => typeof w?.weekNum === 'number')
+        .map((w: { weekNum: number; suggestedMiles?: string; note?: string }) => ({
+          weekNum: w.weekNum,
+          suggestedMiles: typeof w.suggestedMiles === 'string' ? w.suggestedMiles.trim() : undefined,
+          note: typeof w.note === 'string' ? w.note.trim() : undefined,
+        }))
+    : undefined;
+
+  return { coachNote, suggestedWeeks };
 }

@@ -3,6 +3,7 @@ import { getPlan } from '@/lib/store';
 import Link from 'next/link';
 import SyncButton from './SyncButton';
 import AddRunButton from '../AddRunButton';
+import AdaptButton from '../AdaptButton';
 
 function formatDuration(sec?: number): string {
   if (sec == null) return '';
@@ -67,6 +68,7 @@ export default async function SyncPage({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: '1rem' }}>
         {hasStrava && <SyncButton planId={id} />}
         <AddRunButton planId={id} />
+        <AdaptButton planId={id} />
       </div>
       {hasStrava && lastSyncAt && syncResult && (
             <p style={{ marginBottom: '1rem', color: '#737373', fontSize: '0.9rem' }}>

@@ -19,6 +19,7 @@ export default function SyncButton({ planId }: { planId: string }) {
         setLoading(false);
         return;
       }
+      await fetch(`/api/plan/${planId}/adapt`, { method: 'POST' }).catch(() => {});
       router.refresh();
     } catch {
       setError('Something went wrong');

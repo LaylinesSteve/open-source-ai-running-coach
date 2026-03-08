@@ -14,6 +14,7 @@ import PlanTips from './PlanTips';
 import SyncSection from './SyncSection';
 import RevisionForm from './RevisionForm';
 import PlanWeeksPortal from './PlanWeeksPortal';
+import WeekGoalCelebration from './WeekGoalCelebration';
 import { mergeWeeksWithRunLog } from '@/lib/merge-runs';
 
 /** Remove the hero block from stored plan HTML so we show our own hero first. */
@@ -86,7 +87,7 @@ export default async function PlanPage({
     });
   }
 
-  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary;
+  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary || plan.adaptationNote;
   const baseHtml = stripHeroFromPlanHtml(html);
   const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
   const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
@@ -111,12 +112,22 @@ export default async function PlanPage({
           targetTime={plan.targetTime}
           additionalInfo={plan.additionalInfo}
           coachSummary={coachSummary}
+          adaptationNote={plan.adaptationNote}
+          adaptationAt={plan.adaptationAt}
+          adaptationSuggestedWeeks={plan.adaptationSuggestedWeeks}
           raceName={plan.raceName}
           distance={distance}
         />
       )}
       <PlanView html={planContentHtml} planId={id} />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
+      {mergedWeeks && mergedWeeks.length > 0 && (
+        <WeekGoalCelebration
+          planId={id}
+          mergedWeeks={mergedWeeks}
+          celebratedWeekNumbers={plan.celebratedWeekNumbers}
+        />
+      )}
       <PlanTips tips={tips} distance={distance} />
       <SyncSection planId={id} hasWeeksData={!!weeksData} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />

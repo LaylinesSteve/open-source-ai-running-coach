@@ -4,6 +4,9 @@ export default function PlanSummary({
   targetTime,
   additionalInfo,
   coachSummary,
+  adaptationNote,
+  adaptationAt,
+  adaptationSuggestedWeeks,
   raceName,
   distance,
 }: {
@@ -12,6 +15,9 @@ export default function PlanSummary({
   targetTime?: string;
   additionalInfo?: string;
   coachSummary?: string;
+  adaptationNote?: string;
+  adaptationAt?: string;
+  adaptationSuggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
   raceName: string;
   distance: string;
 }) {
@@ -64,6 +70,27 @@ export default function PlanSummary({
         <section style={sectionStyle}>
           <p style={labelStyle}>Coach’s overview</p>
           <p style={textStyle}>{coachSummary}</p>
+        </section>
+      )}
+
+      {adaptationNote && (
+        <section style={sectionStyle}>
+          <p style={labelStyle}>Coach's progress update</p>
+          <p style={textStyle}>{adaptationNote}</p>
+          {adaptationSuggestedWeeks && adaptationSuggestedWeeks.length > 0 && (
+            <ul style={{ ...textStyle, marginTop: '0.75rem', paddingLeft: '1.25rem' }}>
+              {adaptationSuggestedWeeks.map((w) => (
+                <li key={w.weekNum}>
+                  Week {w.weekNum}{w.suggestedMiles ? ` — ${w.suggestedMiles}` : ''}{w.note ? `: ${w.note}` : ''}
+                </li>
+              ))}
+            </ul>
+          )}
+          {adaptationAt && (
+            <p style={{ ...mutedStyle, marginTop: '0.5rem' }}>
+              Updated {new Date(adaptationAt).toLocaleDateString()}
+            </p>
+          )}
         </section>
       )}
     </div>
