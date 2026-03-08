@@ -1,9 +1,11 @@
 export default function PlanHero({
+  athleteName,
   distance,
   raceDate,
   weeks,
   raceUrl,
 }: {
+  athleteName: string;
   distance: string;
   raceDate: string;
   weeks: number;
@@ -53,7 +55,7 @@ export default function PlanHero({
           marginBottom: '1rem',
         }}
       >
-        Trail
+        {athleteName || 'Trail'}
       </p>
       <p
         style={{

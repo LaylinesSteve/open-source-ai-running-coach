@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
   const raceUrl = (body.raceUrl || '').trim();
   const raceName = (body.raceName || 'Marathon').trim();
   const raceDate = (body.raceDate || '').trim(); // YYYY-MM-DD
+  const firstName = (body.firstName || '').trim() || undefined;
+  const lastName = (body.lastName || '').trim() || undefined;
   const distance = (body.distance || 'Marathon').trim() || 'Marathon';
   const goal = (body.goal || '').trim() || undefined;
   const targetTime = (body.targetTime || '').trim() || undefined;
@@ -36,6 +38,8 @@ export async function POST(request: NextRequest) {
     raceName,
     raceDate,
     weeks,
+    firstName,
+    lastName,
     distance,
     goal,
     targetTime,

@@ -108,7 +108,7 @@ export async function generatePlanWithAI(
 - If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
 - Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
-- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) } with personalized tips and useful links for this runner (based on distance, goal, context). Include at least 2 tips with real "url" links to quality training articles, race prep, or nutrition (use real URLs from trusted sources you know).
+- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) } with personalized tips for this runner. For "url" use only stable, working links—e.g. https://www.runnersworld.com/training/ , https://www.runnersworld.com/nutrition/ , https://trailrunnermag.com/ , https://www.irunfar.com/ —no long article paths that may 404.
 - Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
 
   const raceContext = [
@@ -126,7 +126,7 @@ export async function generatePlanWithAI(
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ { "title": "...", "description": "...", "url": "..." optional } ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips with at least 2 having real URLs.`;
+Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ { "title": "...", "description": "...", "url": "..." optional } ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips; for url use only the stable domain paths above.`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,

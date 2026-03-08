@@ -7,6 +7,8 @@ import { RACE_DISTANCE_OPTIONS } from '@/lib/race-distances';
 function FormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [raceUrl, setRaceUrl] = useState('');
   const [raceName, setRaceName] = useState('');
   const [raceDate, setRaceDate] = useState('');
@@ -32,6 +34,8 @@ function FormContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          firstName: firstName.trim() || undefined,
+          lastName: lastName.trim() || undefined,
           raceUrl: raceUrl.trim(),
           raceName: raceName.trim() || 'Marathon',
           raceDate: raceDate.trim(),
@@ -84,13 +88,51 @@ function FormContent() {
         </p>
         <form onSubmit={submit}>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            First name
+          </label>
+          <input
+            type="text"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="Your first name"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Last name
+          </label>
+          <input
+            type="text"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Your last name"
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Race name
           </label>
           <input
             type="text"
             value={raceName}
             onChange={(e) => setRaceName(e.target.value)}
-            placeholder="e.g. Trail 50K"
+            placeholder="e.g. Boston Marathon"
             style={{
               width: '100%',
               padding: '12px 16px',

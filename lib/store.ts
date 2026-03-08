@@ -8,6 +8,8 @@ export interface PlanRecord {
   raceName: string;
   raceDate: string; // YYYY-MM-DD
   weeks: number;
+  firstName?: string;
+  lastName?: string;
   /** Race distance (e.g. "5K", "Marathon", "50K"). */
   distance?: string;
   /** Why they're running (e.g. "First 50K", "PR / time goal"). */

@@ -77,6 +77,7 @@ export default async function PlanPage({
   return (
     <>
       <PlanHero
+        athleteName={[plan.firstName, plan.lastName].filter(Boolean).join(' ') || 'Trail'}
         distance={distance}
         raceDate={plan.raceDate}
         weeks={numWeeks}
