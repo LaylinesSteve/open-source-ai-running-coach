@@ -1,5 +1,16 @@
+import type { LoggedRun } from '@/lib/store';
+
+function formatDuration(sec?: number): string {
+  if (sec == null) return '';
+  const m = Math.floor(sec / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${m} min`;
+}
+
 export default function PlanSummary({
   stravaSummaryText,
+  runLog = [],
   goal,
   targetTime,
   additionalInfo,
@@ -11,6 +22,7 @@ export default function PlanSummary({
   distance,
 }: {
   stravaSummaryText?: string;
+  runLog?: LoggedRun[];
   goal?: string;
   targetTime?: string;
   additionalInfo?: string;
@@ -48,10 +60,51 @@ export default function PlanSummary({
         <p style={mutedStyle}>{distance} · Training summary & context</p>
       </section>
 
-      {stravaSummaryText && (
+      {(runLog.length > 0 || stravaSummaryText) && (
         <section style={sectionStyle}>
-          <p style={labelStyle}>Recent training (Strava)</p>
-          <p style={textStyle}>{stravaSummaryText}</p>
+          <details style={{ margin: 0 }}>
+            <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={labelStyle}>Recent training</span>
+              <span style={{ ...mutedStyle, fontSize: '0.8rem' }}>
+                {runLog.length > 0 ? `${runLog.length} run${runLog.length === 1 ? '' : 's'}` : 'Strava summary'}
+              </span>
+              <span style={{ marginLeft: 'auto', color: '#737373', fontSize: '0.75rem' }}>▼</span>
+            </summary>
+            <div style={{ marginTop: '1rem' }}>
+              {stravaSummaryText && (
+                <p style={{ ...textStyle, marginBottom: runLog.length > 0 ? '1rem' : 0 }}>{stravaSummaryText}</p>
+              )}
+              {runLog.length > 0 && (
+                <div style={{ background: '#0a0a0a', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #262626' }}>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Run</th>
+                        <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
+                        <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {runLog.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25).map((r, i) => (
+                        <tr key={r.stravaId !== 0 ? r.stravaId : `m-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#f5f5f5' }}>{r.name}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#22c55e' }}>{r.distanceMi} mi</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {runLog.length > 25 && (
+                    <p style={{ padding: '0.5rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
+                      + {runLog.length - 25} more runs
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </details>
         </section>
       )}
 

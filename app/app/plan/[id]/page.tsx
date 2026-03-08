@@ -87,7 +87,7 @@ export default async function PlanPage({
     });
   }
 
-  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary || plan.adaptationNote;
+  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary || plan.adaptationNote || (plan.runLog?.length ?? 0) > 0;
   const baseHtml = stripHeroFromPlanHtml(html);
   const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
   const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
@@ -108,6 +108,7 @@ export default async function PlanPage({
       {hasSummary && (
         <PlanSummary
           stravaSummaryText={stravaSummaryText}
+          runLog={plan.runLog}
           goal={plan.goal}
           targetTime={plan.targetTime}
           additionalInfo={plan.additionalInfo}

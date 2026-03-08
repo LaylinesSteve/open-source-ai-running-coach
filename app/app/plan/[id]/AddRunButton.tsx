@@ -71,7 +71,7 @@ export default function AddRunButton({ planId }: { planId: string }) {
           cursor: 'pointer',
         }}
       >
-        Add run
+        Manually Add Run
       </button>
       {open && (
         <div
@@ -98,7 +98,7 @@ export default function AddRunButton({ planId }: { planId: string }) {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Add run</h3>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Manually Add Run</h3>
             <form onSubmit={submit}>
               <label style={{ display: 'block', fontSize: '0.85rem', color: '#a3a3a3', marginBottom: 4 }}>Date</label>
               <input
@@ -203,7 +203,7 @@ export default function AddRunButton({ planId }: { planId: string }) {
                     fontSize: '0.9rem',
                   }}
                 >
-                  {loading ? 'Adding…' : 'Add run'}
+                  {loading ? 'Adding…' : 'Manually Add Run'}
                 </button>
               </div>
             </form>

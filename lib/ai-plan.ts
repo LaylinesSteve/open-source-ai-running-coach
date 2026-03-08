@@ -319,6 +319,12 @@ export interface AdaptPlanResult {
   suggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
 }
 
+function getPlanStartDate(raceDate: string, weeks: number): Date {
+  const d = new Date(raceDate + 'T12:00:00');
+  d.setDate(d.getDate() - (weeks - 1) * 7 - 6);
+  return d;
+}
+
 /** Build context string for adaptation: plan, current weeks, run log, sync summary. */
 export function buildAdaptationContext(
   plan: PlanRecord,
@@ -329,7 +335,18 @@ export function buildAdaptationContext(
   const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const distance = plan.distance || 'Marathon';
 
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const planStart = getPlanStartDate(plan.raceDate, plan.weeks || 12);
+  const diffDays = Math.floor((now.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000));
+  const currentWeekNum = Math.max(1, Math.min(plan.weeks || 12, Math.floor(diffDays / 7) + 1));
+  const todayLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
   const lines: string[] = [
+    '=== TODAY (use this to avoid treating in-progress weeks as missed) ===',
+    `Today is ${todayLabel} (${todayStr}).`,
+    `Current week in the plan is Week ${currentWeekNum}. Weeks run Monday–Sunday. Do NOT say the athlete has "missed" or is "behind" on a week when today is still within that week—they may have many days left to run. Only treat a week as complete or short once that week has ended (after Sunday).`,
+    '',
     '=== RACE & GOALS ===',
     `Race: ${plan.raceName}. Distance: ${distance}. Race date: ${raceDateStr}.`,
     plan.goal ? `Goal: ${plan.goal}.` : '',
@@ -388,14 +405,15 @@ export async function adaptPlanWithAI(
   const distance = plan.distance || 'Marathon';
   const numWeeks = weeksData.length;
 
-  const systemPrompt = `You are an expert running coach. You will be given context about an athlete's training plan and their actual completed runs (run log). Your job is to:
+  const systemPrompt = `You are an expert running coach. You will be given context that includes TODAY'S DATE and which week is the current (in-progress) week. Your job is to:
 
-1. Assess whether they are doing too much (need to ease off and recover), doing about right, or missing too much (need encouragement and practical tips to run a bit more).
-2. Adjust the weekly plan and weekly goals: suggest concrete changes to upcoming weeks (e.g. reduce mileage for recovery, or keep/build as planned, or gentle nudge to hit a bit more). Focus on successive weeks from now; consider overall progress toward the race.
-3. Write a short coach's note (2-4 sentences) that:
+1. Use the "TODAY" section: only consider a week as complete or missed after that week has ended (after Sunday). If today is still within a week, do NOT say they have missed that week's target—they may have several days left to run.
+2. Assess whether they are doing too much (need to ease off and recover), doing about right, or missing too much (need encouragement and practical tips to run a bit more). For the current week in progress, focus on what they've done so far, not on "missing" the weekly total yet.
+3. Adjust the weekly plan and weekly goals: suggest concrete changes to upcoming weeks (e.g. reduce mileage for recovery, or keep/build as planned, or gentle nudge to hit a bit more). Focus on successive weeks from now; consider overall progress toward the race.
+4. Write a short coach's note (2-4 sentences) that:
    - If they are overdoing it: emphasize recovery, sleep, easy days; suggest backing off the next week(s) and state it clearly.
-   - If they are missing too much: encourage them without guilt; give 1-2 practical tips to run a bit more (e.g. one extra short run, or add 10 min to a run, or which run to prioritize).
-   - If they're on track: briefly affirm and any small tweak.
+   - If they are missing too much (only for weeks that have already ended): encourage them without guilt; give 1-2 practical tips to run a bit more.
+   - If they're on track or the current week is still in progress: briefly affirm; do not suggest they are behind on the current week.
 
 Use the exact context provided. Do not invent runs or numbers. Output ONLY a valid JSON object with:
 - "coachNote": string (the 2-4 sentence note for the athlete)
