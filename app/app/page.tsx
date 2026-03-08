@@ -16,7 +16,7 @@ export default function HomePage() {
   const [eggClicks, setEggClicks] = useState(0);
   const [egg2Revealed, setEgg2Revealed] = useState(false);
   const [visible, setVisible] = useState<Record<string, boolean>>({ hero: true });
-  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   const scrollToPasskey = () => {
     passkeyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
