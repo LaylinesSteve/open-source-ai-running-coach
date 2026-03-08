@@ -52,10 +52,25 @@ export interface PlanRecord {
     totalCompleted: number;
     summary: string;
   };
+  /** Log of all runs synced from Strava (for weekly view and adaptation). */
+  runLog?: LoggedRun[];
   /** History of revision requests (what the user asked for). */
   revisionRequests?: { at: string; request: string }[];
   /** History of coach summaries so the AI can maintain context across revisions/sync. */
   coachSummaryHistory?: { at: string; summary: string }[];
+}
+
+export interface LoggedRun {
+  stravaId: number;
+  date: string; // YYYY-MM-DD
+  weekNum: number;
+  dayLabel: string;
+  name: string;
+  distanceMi: number;
+  movingTimeSec?: number;
+  elevationFt?: number;
+  /** Note about the run (e.g. matched planned, adaptation note). */
+  note?: string;
 }
 
 const PREFIX = 'plan:';

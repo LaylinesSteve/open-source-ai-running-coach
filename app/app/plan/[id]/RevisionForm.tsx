@@ -53,6 +53,31 @@ export default function RevisionForm({ planId, hasWeeksData }: { planId: string;
       <p style={{ color: '#a3a3a3', fontSize: '0.9rem', marginBottom: '1rem' }}>
         Describe what you’d like to change (e.g. less mileage, more trail focus, different long-run day). The coach will update your plan.
       </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        {[
+          { label: 'Nutrition & fueling for long runs', text: 'Add advice about nutrition and fueling to each of my long runs.' },
+          { label: 'Weekly mantras', text: 'Add weekly mantras to help me through my training.' },
+          { label: 'Traveling — adapt my plan', text: 'I am traveling the week of [date range] — can you adapt my plan?' },
+        ].map(({ label, text }) => (
+          <button
+            key={label}
+            type="button"
+            onClick={() => setRequest((prev) => (prev ? `${prev}\n\n${text}` : text))}
+            style={{
+              padding: '8px 12px',
+              background: '#262626',
+              border: '1px solid #404040',
+              borderRadius: 6,
+              color: '#a3a3a3',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
       <form onSubmit={submit}>
         <textarea
           value={request}

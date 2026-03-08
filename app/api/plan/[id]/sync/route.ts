@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import type { LoggedRun } from '@/lib/store';
 import { getAccessTokenForPlan } from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
 import type { PlanWeek } from '@/lib/plan-generator';
+
+const MILES_PER_METER = 1 / 1609.34;
+const FEET_PER_METER = 3.28084;
 
 /** Parse "Tue 3/17" or "Sat 4/20" to { month, day }. */
 function parseRunDay(dayStr: string): { month: number; day: number } | null {
@@ -19,6 +23,21 @@ function getPlanStartDate(raceDate: string, weeks: number): Date {
   const d = new Date(raceDate + 'T12:00:00');
   d.setDate(d.getDate() - (weeks - 1) * 7 - 6); // back to Monday week 1
   return d;
+}
+
+/** Format date as "Tue 3/17" for display. */
+function dayLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  return `${days[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/** Week number (1-based) for a date relative to plan start (Monday week 1). */
+function weekNumForDate(dateStr: string, planStart: Date): number {
+  const d = new Date(dateStr + 'T12:00:00');
+  const diffMs = d.getTime() - planStart.getTime();
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  return Math.max(1, Math.min(999, Math.floor(diffDays / 7) + 1));
 }
 
 /** Build list of planned runs with date (YYYY-MM-DD). Uses week number to infer year from plan start. */
@@ -41,17 +60,39 @@ function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string;
   return out;
 }
 
-/** Group Strava runs by date (YYYY-MM-DD), only type Run, in meters -> miles. */
-function groupActivitiesByDate(activities: { type: string; start_date: string; distance?: number }[]): Map<string, number> {
-  const byDate = new Map<string, number>();
+/** Build run log entries from Strava activities (plan window only), deduped by stravaId. */
+function buildRunLog(
+  activities: { id: number; type: string; name: string; start_date: string; distance?: number; moving_time?: number; total_elevation_gain?: number }[],
+  planStart: Date,
+  existingRunLog: LoggedRun[],
+  plannedRuns: { date: string; planned: string }[]
+): LoggedRun[] {
+  const byId = new Map(existingRunLog.map((r) => [r.stravaId, r]));
+  const plannedByDate = new Map(plannedRuns.map((p) => [p.date, p.planned]));
+
   for (const a of activities) {
     if (a.type !== 'Run') continue;
+    if (byId.has(a.id)) continue;
+
     const dateStr = a.start_date.slice(0, 10);
-    const miles = (a.distance ?? 0) / 1609.34;
-    const cur = byDate.get(dateStr) ?? 0;
-    byDate.set(dateStr, cur + miles);
+    const distanceMi = Math.round(((a.distance ?? 0) * MILES_PER_METER) * 10) / 10;
+    const elevationFt = a.total_elevation_gain != null ? Math.round(a.total_elevation_gain * FEET_PER_METER) : undefined;
+    const note = plannedByDate.get(dateStr) ? `Planned: ${plannedByDate.get(dateStr)}` : undefined;
+
+    byId.set(a.id, {
+      stravaId: a.id,
+      date: dateStr,
+      weekNum: weekNumForDate(dateStr, planStart),
+      dayLabel: dayLabel(dateStr),
+      name: a.name || 'Run',
+      distanceMi,
+      movingTimeSec: a.moving_time,
+      elevationFt,
+      note,
+    });
   }
-  return byDate;
+
+  return Array.from(byId.values()).sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function POST(
@@ -76,8 +117,15 @@ export async function POST(
   const after = Math.floor(planStart.getTime() / 1000);
 
   const activities = await fetchStravaActivities(accessToken, 200, { after });
-  const byDate = groupActivitiesByDate(activities);
   const plannedRuns = getPlannedRuns(plan.weeksData, planStart);
+  const existingRunLog = plan.runLog ?? [];
+  const runLog = buildRunLog(activities, planStart, existingRunLog, plannedRuns);
+
+  const byDate = new Map<string, number>();
+  for (const r of runLog) {
+    const cur = byDate.get(r.date) ?? 0;
+    byDate.set(r.date, cur + r.distanceMi);
+  }
 
   const completed: { weekNum: number; dayLabel: string; planned: string; actualMi: number; date: string }[] = [];
   for (const p of plannedRuns) {
@@ -94,10 +142,11 @@ export async function POST(
 
   const totalPlanned = plannedRuns.length;
   const totalCompleted = completed.length;
-  const summary = `${totalCompleted} of ${totalPlanned} planned runs completed`;
+  const summary = `${totalCompleted} of ${totalPlanned} planned runs completed · ${runLog.length} runs in log`;
 
   await updatePlan(planId, {
     lastSyncAt: new Date().toISOString(),
+    runLog,
     syncResult: {
       completed,
       totalPlanned,
@@ -111,6 +160,7 @@ export async function POST(
     summary,
     totalPlanned,
     totalCompleted,
+    runLogCount: runLog.length,
     completed: completed.slice(-30),
   });
 }

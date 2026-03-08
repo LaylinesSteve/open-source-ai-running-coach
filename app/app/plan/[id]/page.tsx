@@ -14,6 +14,7 @@ import PlanTips from './PlanTips';
 import SyncSection from './SyncSection';
 import RevisionForm from './RevisionForm';
 import PlanWeeksPortal from './PlanWeeksPortal';
+import { mergeWeeksWithRunLog } from '@/lib/merge-runs';
 
 /** Remove the hero block from stored plan HTML so we show our own hero first. */
 function stripHeroFromPlanHtml(html: string): string {
@@ -90,6 +91,9 @@ export default async function PlanPage({
   const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
   const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
   const numWeeks = plan.weeks || 12;
+  const mergedWeeks = weeksData
+    ? mergeWeeksWithRunLog(weeksData, plan.runLog ?? [], plan.raceDate, numWeeks)
+    : undefined;
 
   return (
     <>
@@ -112,7 +116,7 @@ export default async function PlanPage({
         />
       )}
       <PlanView html={planContentHtml} planId={id} />
-      {weeksRenderedByReact && weeksData && weeksData.length > 0 && <PlanWeeksPortal weeks={weeksData} />}
+      {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       <PlanTips tips={tips} distance={distance} />
       <SyncSection planId={id} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />

@@ -3,6 +3,14 @@ import { getPlan } from '@/lib/store';
 import Link from 'next/link';
 import SyncButton from './SyncButton';
 
+function formatDuration(sec?: number): string {
+  if (sec == null) return '';
+  const m = Math.floor(sec / 60);
+  const h = Math.floor(m / 60);
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${m} min`;
+}
+
 export default async function SyncPage({
   params,
 }: {
@@ -15,6 +23,7 @@ export default async function SyncPage({
   const hasStrava = !!plan.stravaRefreshToken;
   const syncResult = plan.syncResult;
   const lastSyncAt = plan.lastSyncAt;
+  const runLog = (plan.runLog ?? []).slice().sort((a, b) => b.date.localeCompare(a.date));
 
   return (
     <div
@@ -27,16 +36,28 @@ export default async function SyncPage({
         margin: '0 auto',
       }}
     >
-      <p style={{ marginBottom: '0.5rem' }}>
-        <Link href={`/app/plan/${id}`} style={{ color: '#737373', fontSize: '0.9rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <Link
+          href={`/app/plan/${id}`}
+          style={{
+            display: 'inline-block',
+            padding: '10px 18px',
+            background: '#262626',
+            color: '#f5f5f5',
+            borderRadius: 8,
+            fontSize: '0.9rem',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
           ← Back to plan
         </Link>
-      </p>
+      </div>
       <h1 style={{ fontFamily: '"Bebas Neue", sans-serif', fontSize: '1.75rem', letterSpacing: '0.02em', marginBottom: '0.5rem' }}>
         Training log
       </h1>
       <p style={{ color: '#a3a3a3', fontSize: '0.95rem', marginBottom: '2rem' }}>
-        Compare your recent Strava runs to your plan. We’ll match activities by date and show what you’ve completed.
+        All runs synced from Strava appear here and in your plan's weekly view. Sync to pull in new activities.
       </p>
 
       {!hasStrava ? (
@@ -45,35 +66,41 @@ export default async function SyncPage({
         <>
           <SyncButton planId={id} />
           {lastSyncAt && syncResult && (
-            <div style={{ marginTop: '2rem' }}>
-              <p style={{ color: '#e85d04', fontSize: '0.8rem', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-                Last synced {new Date(lastSyncAt).toLocaleString()}
-              </p>
-              <p style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>{syncResult.summary}</p>
-              {syncResult.completed.length > 0 && (
-                <div style={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #262626' }}>
-                        <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Week</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Day</th>
-                        <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Planned</th>
-                        <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Actual</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {syncResult.completed.slice(-20).reverse().map((r, i) => (
-                        <tr key={i} style={{ borderBottom: '1px solid #262626' }}>
-                          <td style={{ padding: '0.75rem' }}>{r.weekNum}</td>
-                          <td style={{ padding: '0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
-                          <td style={{ padding: '0.75rem' }}>{r.planned}</td>
-                          <td style={{ padding: '0.75rem', textAlign: 'right', color: '#22c55e' }}>{r.actualMi} mi</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+            <p style={{ marginTop: '1rem', color: '#737373', fontSize: '0.9rem' }}>
+              Last synced {new Date(lastSyncAt).toLocaleString()} — {syncResult.summary}
+            </p>
+          )}
+
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2.5rem', marginBottom: '0.75rem' }}>Run log</h2>
+          {runLog.length === 0 ? (
+            <p style={{ color: '#737373', fontSize: '0.9rem' }}>No runs logged yet. Click &quot;Update with recent Strava training&quot; to sync.</p>
+          ) : (
+            <div style={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #262626' }}>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Week</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Run</th>
+                    <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
+                    <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {runLog.map((r) => (
+                    <tr key={r.stravaId} style={{ borderBottom: '1px solid #262626' }}>
+                      <td style={{ padding: '0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
+                      <td style={{ padding: '0.75rem' }}>{r.weekNum}</td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span style={{ color: '#f5f5f5' }}>{r.name}</span>
+                        {r.note && <span style={{ display: 'block', fontSize: '0.8rem', color: '#737373', marginTop: 2 }}>{r.note}</span>}
+                      </td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#22c55e' }}>{r.distanceMi} mi</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </>
