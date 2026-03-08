@@ -296,7 +296,7 @@ function FormContent() {
           </button>
         </form>
         <p style={{ marginTop: 20, fontSize: '0.8rem', color: '#737373' }}>
-          <a href="/app" style={{ color: '#737373' }}>Back</a>
+          <a href="/" style={{ color: '#737373' }}>Back</a>
           {' · '}
           <a href="/training-plan.html" style={{ color: '#e85d04' }}>Example plan</a>
         </p>

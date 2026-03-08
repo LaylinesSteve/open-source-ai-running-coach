@@ -97,10 +97,6 @@ export default function HomePage() {
   return (
     <>
       <style>{`
-        @keyframes gradientShift {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(24px); }
           to { opacity: 1; transform: translateY(0); }
@@ -117,19 +113,13 @@ export default function HomePage() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-6px); }
         }
-        @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(232, 93, 4, 0.35); }
-          50% { box-shadow: 0 0 0 12px rgba(232, 93, 4, 0); }
-        }
         @keyframes konamiCelebrate {
           0% { transform: scale(0); opacity: 0; }
           50% { transform: scale(1.1); opacity: 1; }
           100% { transform: scale(1); opacity: 1; }
         }
         .landing-hero-bg {
-          background: linear-gradient(135deg, #0a0a0a 0%, #141414 25%, #1a1a1a 50%, #141414 75%, #0a0a0a 100%);
-          background-size: 400% 400%;
-          animation: gradientShift 14s ease infinite;
+          background: radial-gradient(ellipse 80% 50% at 50% 120%, rgba(232, 93, 4, 0.12) 0%, transparent 50%), #0a0a0a;
         }
         .landing-cta:hover {
           transform: translateY(-2px);
@@ -141,9 +131,6 @@ export default function HomePage() {
         .landing-cta {
           transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        .landing-cta-hero {
-          animation: pulseGlow 2.5s ease-in-out infinite;
-        }
         .stagger-1 { animation-delay: 0.1s; }
         .stagger-2 { animation-delay: 0.2s; }
         .stagger-3 { animation-delay: 0.3s; }
@@ -151,6 +138,16 @@ export default function HomePage() {
         .stagger-5 { animation-delay: 0.5s; }
         .egg-word { cursor: pointer; user-select: none; }
         .egg-word:hover { color: #e85d04; }
+        .landing-sample-link {
+          color: #737373;
+          border-color: #262626;
+          background: transparent;
+        }
+        .landing-sample-link:hover {
+          color: #e85d04;
+          border-color: #e85d04;
+          background: rgba(232, 93, 4, 0.08);
+        }
       `}</style>
 
       <div
@@ -175,26 +172,32 @@ export default function HomePage() {
             overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'radial-gradient(ellipse 80% 50% at 50% 120%, rgba(232,93,4,0.08) 0%, transparent 60%)',
-              pointerEvents: 'none',
-            }}
-          />
           <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: 720 }}>
+            <p
+              style={{
+                fontSize: 'clamp(0.7rem, 1.8vw, 0.8rem)',
+                color: '#737373',
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                marginBottom: 12,
+                opacity: visible.hero ? 1 : 0,
+                transform: visible.hero ? 'translateY(0)' : 'translateY(12px)',
+                transition: 'opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s',
+              }}
+            >
+              Personalized training for your race
+            </p>
             <h1
               style={{
                 fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: 'clamp(3rem, 12vw, 5.5rem)',
+                fontSize: 'clamp(3.5rem, 14vw, 6rem)',
                 fontWeight: 400,
                 letterSpacing: '0.02em',
-                lineHeight: 1,
-                marginBottom: 20,
+                lineHeight: 0.95,
+                marginBottom: 8,
                 opacity: visible.hero ? 1 : 0,
                 transform: visible.hero ? 'translateY(0)' : 'translateY(24px)',
-                transition: 'opacity 0.8s ease, transform 0.8s ease',
+                transition: 'opacity 0.8s ease 0.2s, transform 0.8s ease 0.2s',
               }}
             >
               Your race.
@@ -216,54 +219,75 @@ export default function HomePage() {
             </h1>
             <p
               style={{
-                fontSize: 'clamp(1rem, 2.2vw, 1.25rem)',
+                fontSize: 'clamp(1rem, 2.2vw, 1.2rem)',
                 color: '#a3a3a3',
-                maxWidth: 480,
-                margin: '0 auto 40px',
+                maxWidth: 440,
+                margin: '0 auto 2.5rem',
                 lineHeight: 1.5,
                 opacity: visible.hero ? 1 : 0,
                 transform: visible.hero ? 'translateY(0)' : 'translateY(16px)',
-                transition: 'opacity 0.8s ease 0.15s, transform 0.8s ease 0.15s',
+                transition: 'opacity 0.7s ease 0.35s, transform 0.7s ease 0.35s',
               }}
             >
-              A personalized training plan built from your goal, your date, and your Strava—so you show up ready.
+              Built from your goal, your date, and your Strava. Show up ready.
             </p>
             <div
               style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 16,
                 opacity: visible.hero ? 1 : 0,
                 transform: visible.hero ? 'translateY(0)' : 'translateY(16px)',
-                transition: 'opacity 0.8s ease 0.3s, transform 0.8s ease 0.3s',
+                transition: 'opacity 0.7s ease 0.45s, transform 0.7s ease 0.45s',
               }}
             >
               <button
                 type="button"
                 onClick={scrollToPasskey}
-                className="landing-cta landing-cta-hero"
+                className="landing-cta"
                 style={{
-                  padding: '18px 40px',
-                  fontSize: '1.1rem',
-                  fontWeight: 700,
+                  padding: '14px 32px',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
                   color: '#fff',
                   background: '#e85d04',
                   border: 'none',
-                  borderRadius: 12,
+                  borderRadius: 6,
                   cursor: 'pointer',
-                  letterSpacing: '0.02em',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
                 }}
               >
                 Create my training plan
               </button>
+              <a
+                href="/app/plan/ca5cd7bf"
+                className="landing-sample-link"
+                style={{
+                  fontSize: '0.85rem',
+                  textDecoration: 'none',
+                  letterSpacing: '0.05em',
+                  border: '1px solid',
+                  padding: '10px 20px',
+                  borderRadius: 6,
+                  transition: 'color 0.2s, border-color 0.2s, background 0.2s',
+                }}
+              >
+                View a sample plan
+              </a>
             </div>
             <p
               style={{
                 marginTop: 28,
-                fontSize: '0.85rem',
-                color: '#737373',
+                fontSize: '0.75rem',
+                color: '#525252',
+                letterSpacing: '0.1em',
                 opacity: visible.hero ? 1 : 0,
-                transition: 'opacity 0.8s ease 0.4s',
+                transition: 'opacity 0.7s ease 0.55s',
               }}
             >
-              Takes under a minute · Connect Strava for a plan that fits your current fitness
+              Takes under a minute · Connect Strava to personalize
             </p>
             {/* Easter egg 2: click "run" twice */}
             <p
@@ -454,8 +478,8 @@ export default function HomePage() {
               </button>
             </form>
             <p style={{ marginTop: 24, fontSize: '0.85rem', color: '#737373', textAlign: 'center' }}>
-              <a href="/training-plan.html" style={{ color: '#e85d04', textDecoration: 'none' }}>
-                View example plan →
+              <a href="/app/plan/ca5cd7bf" style={{ color: '#e85d04', textDecoration: 'none' }}>
+                View a sample plan →
               </a>
             </p>
           </div>

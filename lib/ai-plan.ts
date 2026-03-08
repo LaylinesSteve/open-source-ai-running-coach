@@ -108,7 +108,7 @@ export async function generatePlanWithAI(
 - If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
 - Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
-- Also output "tips": an array of 4-6 objects { "title": string, "description": string, "url": string (optional) }. Each tip should be specific to this athlete (their goal, target time, recent training, and race distance). For "url": provide a real, specific article link—not a generic homepage. The article must be relevant to that tip and to the athlete (e.g. first marathon, trail 50K fueling, low-mileage build-up, taper for their distance). Use full URLs to real articles from trusted sources (Runner's World, Trail Runner Magazine, iRunFar, etc.). Only include "url" when you can point to a concrete article that fits; do not invent or guess URLs.
+- Also output "tips": an array of exactly 6 objects { "title": string, "description": string, "url": string (optional) }. Each tip should be about a topic that will interest this athlete given their goal, target time, recent training, and race distance—e.g. first marathon, trail/ultra fueling, taper, combining running with cross-training, injury prevention, pacing, mental preparation, race-day nutrition. Pick topics that match their situation so the tips feel personally relevant. For "url": only include a link if you know a real, working article URL that you are confident exists and matches the tip. Use full URLs to real articles from trusted sources (e.g. Runner's World, Trail Runner Magazine, iRunFar, Strength Running). Do not invent, guess, or construct URLs. If you are not certain a URL is valid and live, omit "url" for that tip—the tip will still display with title and description. It is better to have no URL than a broken link.
 - Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
 
   const raceContext = [
@@ -126,7 +126,7 @@ export async function generatePlanWithAI(
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ ... ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include 4-6 tips tailored to this athlete; for each tip that has a "url", use a real, specific article URL relevant to their goals, training level, and race (not generic site links).`;
+Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "...", "tips": [ ... ] } Use real dates. Each run: day, dist, notes, long, coachTip. Last week's longRun must be "${distance}". Include exactly 6 tips on topics that will interest this athlete; only add "url" when you are sure the link is a real, working article—otherwise omit "url".`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -190,7 +190,7 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : '';
   const rawTips = Array.isArray(obj.tips) ? obj.tips : [];
-  const tips: PlanTip[] = rawTips.slice(0, 8).map((t: { title?: string; description?: string; url?: string }) => ({
+  const tips: PlanTip[] = rawTips.slice(0, 6).map((t: { title?: string; description?: string; url?: string }) => ({
     title: String(t?.title ?? '').trim() || 'Tip',
     description: String(t?.description ?? '').trim() || '',
     url: typeof t?.url === 'string' && t.url.trim() ? t.url.trim() : undefined,

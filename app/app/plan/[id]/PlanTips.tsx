@@ -8,7 +8,7 @@ export default function PlanTips({
   tips?: PlanTip[] | null;
   distance: string;
 }) {
-  const list = (tips && tips.length > 0 ? tips : getDefaultTips(distance)).slice(0, 8);
+  const list = (tips && tips.length > 0 ? tips : getDefaultTips(distance)).slice(0, 6);
   if (list.length === 0) return null;
 
   return (
