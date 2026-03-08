@@ -1,5 +1,6 @@
 import type { PlanRecord } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
+import { getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { refreshStravaToken, fetchStravaActivities, type StravaActivity } from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
 
@@ -61,37 +62,45 @@ export function buildStravaSummary(activities: StravaActivity[]): string {
   return lines.join('\n');
 }
 
-const PLAN_WEEK_JSON_SCHEMA = `Each week must be a JSON object with:
-- num: number (1-11)
+const PLAN_WEEK_JSON_SCHEMA = (n: number, distance: string) => `Each week must be a JSON object with:
+- num: number (1-${n})
 - range: string, e.g. "Mar 7–13" (Monday–Sunday of that week)
 - miles: string, e.g. "~16 mi" or "—" for race week
-- phase: string, one of "Base", "Build", "Peak", "Last full week", "Taper 1", "Race week"
-- longRun: string, e.g. "6 mi" or "50K" for week 11
-- raceWeek: boolean, true only for week 11
+- phase: string, e.g. "Base", "Build", "Peak", "Race week" (taper length/structure is up to you)
+- longRun: string, e.g. "6 mi" or "${distance}" for the final (race) week
+- raceWeek: boolean, true only for week ${n}
 - runs: array of { day: string (e.g. "Tue 3/10"), dist: string (e.g. "4 mi"), notes: string, long: boolean }
-  Typical week: Tue easy, Thu easy, Sat long run, + 1 optional. Race week: Tue 3-4 mi, Thu 2-3 mi, Fri Rest, Sat 50K.`;
+  Typical week: Tue easy, Thu easy, Sat long run, + 1 optional. Race week: short runs Tue/Thu, Rest Fri, race Saturday.`;
 
-/** Generate an 11-week trail 50K plan using the user's Strava data and race info (Gemini). */
+export interface GeneratePlanResult {
+  weeks: PlanWeek[];
+  coachSummary: string;
+}
+
+/** Generate a personalized training plan for the selected distance using Strava data and race info (Gemini). */
 export async function generatePlanWithAI(
   plan: PlanRecord,
   stravaSummary: string
-): Promise<PlanWeek[]> {
+): Promise<GeneratePlanResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
+  const distance = plan.distance || 'Marathon';
+  const numWeeks = plan.weeks || getDefaultWeeksForDistance(distance);
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
   const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  const systemPrompt = `You are an expert running coach creating a personalized 11-week trail 50K training plan. The plan must be realistic given the athlete's current training and must follow this structure:
-- 11 weeks total, ending on race day (week 11 = race week).
-- Long run progression: 6, 8, 10, 11, 12, 14, 16, 18 mi for weeks 1-8, then 14 mi (week 9), 8 mi (week 10), and 50K race (week 11). Two-week taper.
-- Each week: typically Tue easy, Thu easy, Sat long run, plus optional short run. Use "day" format like "Tue 3/10" with actual dates for the plan.
-- If the athlete's recent volume is low or they have gaps, suggest a softer start (e.g. week 1 long run 4-5 mi instead of 6) and note it in the week's runs or phase.
-- Use the athlete's goal, target time (if any), and any extra context to tailor advice (e.g. pacing notes for time goals, confidence-building for first 50K).
-- Output ONLY a valid JSON object with a single key "weeks" whose value is an array of exactly 11 week objects. No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA}`;
+  const systemPrompt = `You are an expert running coach creating a personalized ${numWeeks}-week training plan for a ${distance} race. The plan must be realistic given the athlete's current training.
+- ${numWeeks} weeks total, ending on race day (week ${numWeeks} = race week). Include an appropriate taper before race day; let the athlete's context and distance guide taper length and structure—do not dictate a fixed taper.
+- Long run progression should fit the race distance: for shorter races (5K, 10K) use lower mileage; for marathon/ultra build to appropriate peak long runs.
+- Each week: typically Tue easy, Thu easy, Sat long run, plus optional short run. Use "day" format like "Tue 3/10" with actual dates so the last Saturday is ${raceDateStr}.
+- If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
+- Use the athlete's goal, target time (if any), and any extra context to tailor advice.
+- Also output a "coachSummary" key: a short paragraph (2-4 sentences) summarizing the athlete's recent training, how it informed the plan, and your overall approach (e.g. softer start, focus on long runs, taper).
+- Output ONLY a valid JSON object with keys "weeks" (array of exactly ${numWeeks} week objects) and "coachSummary" (string). No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
 
   const raceContext = [
-    `Race: ${plan.raceName}. Race date: ${raceDateStr} (Saturday).`,
+    `Race: ${plan.raceName}. Distance: ${distance}. Race date: ${raceDateStr} (Saturday).`,
     plan.raceUrl ? `Race link (use for course/terrain context if known): ${plan.raceUrl}.` : null,
     plan.goal ? `Athlete's goal: ${plan.goal}.` : null,
     plan.targetTime ? `Target time: ${plan.targetTime}.` : null,
@@ -105,7 +114,7 @@ export async function generatePlanWithAI(
 Athlete's recent running (from Strava):
 ${stravaSummary}
 
-Generate the 11-week plan. Return JSON: { "weeks": [ ... ] } with 11 week objects. Use real dates (week 11 Saturday = race day). Each week: num, range, miles, phase, longRun, raceWeek, runs (array of { day, dist, notes, long }). Tailor notes and phase descriptions to the athlete's goal and context where appropriate.`;
+Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSummary": "2-4 sentences on their training and how the plan is tailored." } Use real dates (week ${numWeeks} Saturday = race day ${raceDateStr}). Each week: num, range, miles, phase, longRun, raceWeek, runs. Last week's longRun must be "${distance}" (race day). Tailor notes to the athlete's goal and context.`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -141,19 +150,23 @@ Generate the 11-week plan. Return JSON: { "weeks": [ ... ] } with 11 week object
     else throw new Error('Could not parse AI response as JSON');
   }
 
-  const weeks = Array.isArray(parsed) ? parsed : (parsed as { weeks?: PlanWeek[] }).weeks ?? null;
-  if (!weeks || weeks.length !== 11) {
-    throw new Error('AI did not return 11 weeks');
+  const obj = parsed as { weeks?: PlanWeek[]; coachSummary?: string };
+  const rawWeeks = Array.isArray(parsed) ? parsed : obj.weeks ?? null;
+  if (!rawWeeks || rawWeeks.length < 1) {
+    throw new Error('AI did not return any weeks');
   }
 
-  // Normalize: ensure race week is week 11 and has 50K
-  const normalized: PlanWeek[] = weeks.slice(0, 11).map((w: Record<string, unknown>, i: number) => ({
+  const n = rawWeeks.length;
+  const raceLabel = plan.distance || 'Marathon';
+
+  // Normalize: ensure last week is race week with correct label
+  const normalized: PlanWeek[] = rawWeeks.slice(0, n).map((w: Record<string, unknown>, i: number) => ({
     num: i + 1,
     range: String(w.range ?? ''),
-    miles: String(w.miles ?? (i === 10 ? '—' : '~0 mi')),
+    miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
     phase: String(w.phase ?? ''),
-    longRun: i === 10 ? '50K' : String(w.longRun ?? ''),
-    raceWeek: i === 10,
+    longRun: i === n - 1 ? raceLabel : String(w.longRun ?? ''),
+    raceWeek: i === n - 1,
     runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean }[]).map((r) => ({
       day: String(r.day ?? ''),
       dist: String(r.dist ?? ''),
@@ -162,5 +175,101 @@ Generate the 11-week plan. Return JSON: { "weeks": [ ... ] } with 11 week object
     })) : [],
   }));
 
-  return normalized;
+  const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : '';
+  return { weeks: normalized, coachSummary };
+}
+
+/** Revise the plan based on user feedback; returns updated weeks and coach summary. */
+export async function revisePlanWithAI(
+  plan: PlanRecord,
+  stravaSummary: string,
+  currentWeeks: PlanWeek[],
+  userRequest: string
+): Promise<GeneratePlanResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+  const distance = plan.distance || 'Marathon';
+  const numWeeks = currentWeeks.length;
+  const raceDate = new Date(plan.raceDate + 'T12:00:00');
+  const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const currentPlanJson = JSON.stringify(
+    currentWeeks.map((w) => ({ num: w.num, range: w.range, miles: w.miles, phase: w.phase, longRun: w.longRun, raceWeek: w.raceWeek, runs: w.runs })),
+    null,
+    2
+  );
+
+  const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan. You will be given their context, current plan, and their request. Return a revised plan that addresses their request while keeping the same structure (same number of weeks, same race date ${raceDateStr}). Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of ${numWeeks} week objects, same schema as before) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.`;
+
+  const userPrompt = `Race: ${plan.raceName}. Distance: ${distance}. Date: ${raceDateStr}.
+${plan.goal ? `Goal: ${plan.goal}.` : ''} ${plan.targetTime ? `Target time: ${plan.targetTime}.` : ''} ${plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : ''}
+
+Recent training (Strava):
+${stravaSummary}
+
+Current plan (JSON):
+${currentPlanJson}
+
+Athlete's revision request: ${userRequest}
+
+Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Keep real dates; last week Saturday = race day. Last week's longRun must be "${distance}".`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+        generationConfig: {
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error: ${err}`);
+  }
+
+  const data = await res.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!content) throw new Error('Empty response from Gemini');
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Could not parse AI revision response as JSON');
+  }
+
+  const obj = parsed as { weeks?: PlanWeek[]; coachSummary?: string };
+  const rawWeeks = obj.weeks ?? null;
+  if (!rawWeeks || rawWeeks.length < 1) {
+    throw new Error('AI did not return any weeks');
+  }
+
+  const n = Math.min(rawWeeks.length, numWeeks);
+  const raceLabel = plan.distance || 'Marathon';
+  const rawSlice = rawWeeks.slice(0, n) as unknown as Record<string, unknown>[];
+  const normalized: PlanWeek[] = rawSlice.map((w, i) => ({
+    num: i + 1,
+    range: String(w.range ?? ''),
+    miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
+    phase: String(w.phase ?? ''),
+    longRun: i === n - 1 ? raceLabel : String(w.longRun ?? ''),
+    raceWeek: i === n - 1,
+    runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean }[]).map((r) => ({
+      day: String(r.day ?? ''),
+      dist: String(r.dist ?? ''),
+      notes: String(r.notes ?? ''),
+      long: Boolean(r.long),
+    })) : [],
+  }));
+
+  const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : 'Plan updated based on your feedback.';
+  return { weeks: normalized, coachSummary };
 }

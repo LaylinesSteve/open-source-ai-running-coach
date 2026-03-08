@@ -1,7 +1,9 @@
 /**
- * Generates a trail 50K-style training plan from race date and optional Strava baseline.
- * Same structure as the static plan: 11 weeks, long runs 6→8→10→11→12→14→16→18, then 2-week taper.
+ * Generates training plan weeks from race date and distance.
+ * 50K uses the classic 11-week trail progression; other distances use a default week count and progression.
  */
+
+import { getDefaultWeeksForDistance } from '@/lib/race-distances';
 
 export interface PlanWeek {
   num: number;
@@ -24,69 +26,98 @@ function addDays(d: Date, days: number): Date {
   return out;
 }
 
-export function generatePlanWeeks(raceDate: Date): PlanWeek[] {
-  // Race = week 11 Saturday. Week 1 Saturday = 10 weeks before race.
+/** Race week label for display (e.g. "50K", "Marathon", "5K"). */
+function raceLabel(distance: string): string {
+  return distance || 'Marathon';
+}
+
+/** Build long-run numbers (miles) for build + 2-week taper + race. Last entry is 0 (race). */
+function buildLongRuns(numWeeks: number, distance: string): number[] {
+  if (numWeeks === 11 && distance === '50K') {
+    return [6, 8, 10, 11, 12, 14, 16, 18, 14, 8, 0];
+  }
+  const peakByDistance: Record<string, number> = {
+    '5K': 3,
+    '10K': 6,
+    'Half Marathon': 12,
+    'Marathon': 20,
+    '50K': 18,
+    '50 Mile': 28,
+    '100K': 25,
+    '100 Mile': 35,
+  };
+  const peak = peakByDistance[distance] ?? 18;
+  const buildWeeks = Math.max(1, numWeeks - 3);
+  const longRuns: number[] = [];
+  for (let i = 0; i < buildWeeks; i++) {
+    longRuns.push(Math.round((peak * (i + 1)) / buildWeeks));
+  }
+  longRuns.push(Math.round(peak * 0.75));
+  longRuns.push(Math.min(8, Math.round(peak * 0.4)));
+  longRuns.push(0);
+  return longRuns;
+}
+
+export function generatePlanWeeks(raceDate: Date, distance: string = 'Marathon'): PlanWeek[] {
+  const numWeeks = getDefaultWeeksForDistance(distance);
   const raceSat = new Date(raceDate);
   raceSat.setHours(12, 0, 0, 0);
   const weekSaturdays: Date[] = [];
-  for (let w = 0; w < 11; w++) {
-    weekSaturdays.push(addDays(raceSat, -7 * (10 - w))); // week 0 = 70 days before, week 10 = race day
+  for (let w = 0; w < numWeeks; w++) {
+    weekSaturdays.push(addDays(raceSat, -7 * (numWeeks - 1 - w)));
   }
 
-  const longRuns = [6, 8, 10, 11, 12, 14, 16, 18, 14, 8, 0]; // week 11 = race
-  const weeklyMi = [16, 18, 20, 22, 24, 26, 28, 28, 26, 18, 0];
-  const phases = [
-    'Base',
-    'Build',
-    'Build',
-    'Build',
-    'Build',
-    'Build',
-    'Peak',
-    'Peak',
-    'Last full week',
-    'Taper 1',
-    'Race week',
-  ];
+  const longRuns = buildLongRuns(numWeeks, distance);
+  const raceWeekLabel = raceLabel(distance);
+
+  const runDay = (d: Date) => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${days[d.getDay()]} ${m}/${day}`;
+  };
+
+  const phases: string[] = [];
+  for (let i = 0; i < numWeeks; i++) {
+    if (i === numWeeks - 1) phases.push('Race week');
+    else if (i === numWeeks - 2) phases.push('Taper 1');
+    else if (i === numWeeks - 3) phases.push('Last full week');
+    else if (i < 2) phases.push('Base');
+    else if (i < numWeeks - 4) phases.push('Build');
+    else phases.push('Peak');
+  }
 
   const weeks: PlanWeek[] = [];
-  for (let i = 0; i < 11; i++) {
+  for (let i = 0; i < numWeeks; i++) {
     const sat = weekSaturdays[i];
     const mon = addDays(sat, -6);
     const range = `${formatDate(mon)}–${formatDate(sat)}`;
-    const isRaceWeek = i === 10;
-    const longRun = isRaceWeek ? '50K' : `${longRuns[i]} mi`;
-    const miles = isRaceWeek ? '—' : `~${weeklyMi[i]} mi`;
+    const isRaceWeek = i === numWeeks - 1;
+    const longRun = isRaceWeek ? raceWeekLabel : `${longRuns[i]} mi`;
+    const weeklyMi = isRaceWeek ? 0 : longRuns[i] * 2 + 4;
+    const miles = isRaceWeek ? '—' : `~${weeklyMi} mi`;
 
     const tue = addDays(sat, -4);
     const thu = addDays(sat, -2);
 
-    const runDay = (d: Date) => {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const m = d.getMonth() + 1;
-      const day = d.getDate();
-      return `${days[d.getDay()]} ${m}/${day}`;
-    };
-
-    const runs =
-      i < 10
-        ? [
-            { day: runDay(tue), dist: i >= 3 ? '5 mi' : '4 mi', notes: '', long: false },
-            { day: runDay(thu), dist: i === 6 || i === 8 ? '6 mi' : i >= 4 ? '5 mi' : '4 mi', notes: '', long: false },
-            {
-              day: runDay(sat),
-              dist: longRun,
-              notes: isRaceWeek ? 'Race day' : i === 0 ? 'Long run — easy, trail if possible' : i === 9 ? 'Long run — easy, last long before race' : 'Long run — trail',
-              long: true,
-            },
-            { day: i < 9 ? '+ 1 optional' : 'Optional', dist: i === 9 ? '2 mi' : i >= 6 ? '1–2 mi' : '2–3 mi', notes: '', long: false },
-          ]
-        : [
-            { day: runDay(addDays(sat, -4)), dist: '3–4 mi', notes: 'Keep legs moving', long: false },
-            { day: runDay(addDays(sat, -2)), dist: '2–3 mi', notes: 'Optional', long: false },
-            { day: runDay(addDays(sat, -1)), dist: 'Rest', notes: 'Or 20 min walk', long: false },
-            { day: runDay(sat), dist: '50K', notes: 'Race day', long: true },
-          ];
+    const runs = isRaceWeek
+      ? [
+          { day: runDay(addDays(sat, -4)), dist: '3–4 mi', notes: 'Keep legs moving', long: false },
+          { day: runDay(addDays(sat, -2)), dist: '2–3 mi', notes: 'Optional', long: false },
+          { day: runDay(addDays(sat, -1)), dist: 'Rest', notes: 'Or 20 min walk', long: false },
+          { day: runDay(sat), dist: raceWeekLabel, notes: 'Race day', long: true },
+        ]
+      : [
+          { day: runDay(tue), dist: longRuns[i] >= 10 ? '5 mi' : '4 mi', notes: '', long: false },
+          { day: runDay(thu), dist: longRuns[i] >= 12 ? '5 mi' : '4 mi', notes: '', long: false },
+          {
+            day: runDay(sat),
+            dist: longRun,
+            notes: i === 0 ? 'Long run — easy' : i === numWeeks - 2 ? 'Long run — easy, last long before race' : 'Long run',
+            long: true,
+          },
+          { day: i < numWeeks - 2 ? '+ 1 optional' : 'Optional', dist: '2–3 mi', notes: '', long: false },
+        ];
 
     weeks.push({
       num: i + 1,
@@ -105,21 +136,28 @@ export function planWeeksToHtml(
   weeks: PlanWeek[],
   raceName: string,
   raceDate: string,
-  raceUrl: string
+  raceUrl: string,
+  distance: string = 'Marathon'
 ): string {
+  const numWeeks = weeks.length;
   const raceDateFormatted = new Date(raceDate + 'T12:00:00').toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
   });
   const startDate = weeks[0]?.range?.split('–')[0] || '';
-  const endDate = weeks[10]?.range?.split('–')[1] || raceDateFormatted;
+  const endDate = weeks[numWeeks - 1]?.range?.split('–')[1] || raceDateFormatted;
+  const distanceLabel = distance || 'Marathon';
 
+  const maxLongRunMi = Math.max(
+    ...weeks.filter((w) => !w.raceWeek).map((w) => parseInt(w.longRun.replace(/[^\d]/g, ''), 10) || 0),
+    18
+  );
   const longRunToPct = (lr: string): number => {
-    if (/50k|50K|race/i.test(lr)) return 100;
+    if (!/^\d+\s*mi$/i.test(lr)) return 100; // race week or non-mile label
     const n = parseInt(lr.replace(/[^\d]/g, ''), 10);
     if (Number.isNaN(n)) return 25;
-    return Math.min(64, Math.round((n / 18) * 64)) || 21;
+    return Math.min(64, Math.round((n / maxLongRunMi) * 64)) || 21;
   };
 
   const progressBars = weeks.map((w, i) => {
@@ -133,6 +171,7 @@ export function planWeeksToHtml(
   }).join('\n      ');
 
   const weeksJson = JSON.stringify(weeks);
+  const gridCols = Math.min(numWeeks, 20);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -159,7 +198,7 @@ export function planWeeksToHtml(
     .section-label { font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
     .section-title { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 2rem; }
     .progress-section { background: var(--surface); padding: 4rem 1.5rem; }
-    .progress-grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: 0.5rem; align-items: end; height: 240px; margin-top: 1.5rem; }
+    .progress-grid { display: grid; grid-template-columns: repeat(${gridCols}, 1fr); gap: 0.5rem; align-items: end; height: 240px; margin-top: 1.5rem; }
     .progress-bar-wrap { display: flex; flex-direction: column; align-items: center; }
     .progress-bar { width: 100%; min-height: 20px; background: linear-gradient(180deg, var(--accent) 0%, var(--accent-bright) 100%); border-radius: 4px 4px 0 0; }
     .progress-bar.race { background: linear-gradient(180deg, var(--success) 0%, #4ade80 100%); }
@@ -192,10 +231,10 @@ export function planWeeksToHtml(
 </head>
 <body>
   <header class="hero">
-    <h1 class="font-display">50K</h1>
+    <h1 class="font-display">${distanceLabel}</h1>
     <p class="sub">Trail</p>
     <p class="date font-display">${raceDateFormatted}</p>
-    <p class="weeks">11 Weeks · ${startDate} → ${endDate}</p>
+    <p class="weeks">${numWeeks} Week${numWeeks === 1 ? '' : 's'} · ${startDate} → ${endDate}</p>
     ${raceUrl ? `<a href="${raceUrl}" target="_blank" rel="noopener">Race info</a>` : ''}
   </header>
   <section class="progress-section" id="progress">
@@ -207,7 +246,7 @@ export function planWeeksToHtml(
   </section>
   <section id="weeks">
     <p class="section-label">Weekly plan</p>
-    <h2 class="section-title font-display">11 weeks</h2>
+    <h2 class="section-title font-display">${numWeeks} week${numWeeks === 1 ? '' : 's'}</h2>
     <div class="weeks-grid" id="weeksGrid"></div>
   </section>
   <section class="cta-section">

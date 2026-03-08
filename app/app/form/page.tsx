@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { RACE_DISTANCE_OPTIONS } from '@/lib/race-distances';
 
 function FormContent() {
   const router = useRouter();
@@ -9,6 +10,7 @@ function FormContent() {
   const [raceUrl, setRaceUrl] = useState('');
   const [raceName, setRaceName] = useState('');
   const [raceDate, setRaceDate] = useState('');
+  const [distance, setDistance] = useState('Marathon');
   const [goal, setGoal] = useState('');
   const [targetTime, setTargetTime] = useState('');
   const [additionalInfo, setAdditionalInfo] = useState('');
@@ -31,8 +33,9 @@ function FormContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           raceUrl: raceUrl.trim(),
-          raceName: raceName.trim() || 'Trail 50K',
+          raceName: raceName.trim() || 'Marathon',
           raceDate: raceDate.trim(),
+          distance: distance || 'Marathon',
           goal: goal.trim() || undefined,
           targetTime: targetTime.trim() || undefined,
           additionalInfo: additionalInfo.trim() || undefined,
@@ -77,7 +80,7 @@ function FormContent() {
           Your race plan
         </h1>
         <p style={{ color: '#737373', fontSize: '0.9rem', marginBottom: 24 }}>
-          We’ll generate an 11-week trail 50K training plan from your race date.
+          We’ll generate a training plan for your race distance and date.
         </p>
         <form onSubmit={submit}>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
@@ -118,6 +121,29 @@ function FormContent() {
               marginBottom: 16,
             }}
           />
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            Race distance
+          </label>
+          <select
+            value={distance}
+            onChange={(e) => setDistance(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 16,
+            }}
+          >
+            {RACE_DISTANCE_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Link to race (optional)
           </label>

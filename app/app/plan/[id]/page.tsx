@@ -8,6 +8,8 @@ import {
 } from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
 import PlanView from './PlanView';
+import PlanSummary from './PlanSummary';
+import RevisionForm from './RevisionForm';
 
 export default async function PlanPage({
   params,
@@ -20,9 +22,15 @@ export default async function PlanPage({
     redirect('/app/form');
   }
 
+  const distance = plan.distance || 'Marathon';
+
   let html = plan.generatedHtml;
+  let stravaSummaryText = plan.stravaSummaryText;
+  let coachSummary = plan.coachSummary;
+  let weeksData = plan.weeksData;
+
   if (!html) {
-    let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'));
+    let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
 
     if (plan.stravaRefreshToken && process.env.GEMINI_API_KEY) {
       try {
@@ -30,17 +38,44 @@ export default async function PlanPage({
         if (accessToken) {
           const activities = await fetchStravaActivities(accessToken);
           const stravaSummary = buildStravaSummary(activities);
-          weeks = await generatePlanWithAI(plan, stravaSummary);
+          stravaSummaryText = stravaSummary;
+          const result = await generatePlanWithAI(plan, stravaSummary);
+          weeks = result.weeks;
+          coachSummary = result.coachSummary || undefined;
         }
       } catch {
-        weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'));
+        weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
       }
     }
 
-    html = planWeeksToHtml(weeks, plan.raceName, plan.raceDate, plan.raceUrl);
+    html = planWeeksToHtml(weeks, plan.raceName, plan.raceDate, plan.raceUrl, distance);
+    weeksData = weeks;
     const { updatePlan } = await import('@/lib/store');
-    await updatePlan(id, { generatedHtml: html });
+    await updatePlan(id, {
+      generatedHtml: html,
+      stravaSummaryText: stravaSummaryText || undefined,
+      coachSummary: coachSummary || undefined,
+      weeksData,
+    });
   }
 
-  return <PlanView html={html} planId={id} />;
+  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary;
+
+  return (
+    <>
+      {hasSummary && (
+        <PlanSummary
+          stravaSummaryText={stravaSummaryText}
+          goal={plan.goal}
+          targetTime={plan.targetTime}
+          additionalInfo={plan.additionalInfo}
+          coachSummary={coachSummary}
+          raceName={plan.raceName}
+          distance={distance}
+        />
+      )}
+      <PlanView html={html} planId={id} />
+      <RevisionForm planId={id} hasWeeksData={!!weeksData} />
+    </>
+  );
 }

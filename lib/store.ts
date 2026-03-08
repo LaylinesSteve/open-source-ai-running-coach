@@ -1,5 +1,6 @@
 import { Redis } from '@upstash/redis';
 import { createClient, type RedisClientType } from 'redis';
+import type { PlanWeek } from '@/lib/plan-generator';
 
 export interface PlanRecord {
   id: string;
@@ -7,6 +8,8 @@ export interface PlanRecord {
   raceName: string;
   raceDate: string; // YYYY-MM-DD
   weeks: number;
+  /** Race distance (e.g. "5K", "Marathon", "50K"). */
+  distance?: string;
   /** Why they're running (e.g. "First 50K", "PR / time goal"). */
   goal?: string;
   /** Target time if they have one (e.g. "under 7 hours", "6:30"). */
@@ -18,6 +21,12 @@ export interface PlanRecord {
   stravaExpiresAt?: number;
   createdAt: string;
   generatedHtml?: string;
+  /** Strava training summary (last ~90 days) for display. */
+  stravaSummaryText?: string;
+  /** Coach overview / assessment from AI. */
+  coachSummary?: string;
+  /** Stored plan weeks for revision flow. */
+  weeksData?: PlanWeek[];
 }
 
 const PREFIX = 'plan:';

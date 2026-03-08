@@ -18,13 +18,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, planId });
   }
 
+  const distance = plan.distance || 'Marathon';
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
-  const weeks = generatePlanWeeks(raceDate);
+  const weeks = generatePlanWeeks(raceDate, distance);
   const html = planWeeksToHtml(
     weeks,
     plan.raceName,
     plan.raceDate,
-    plan.raceUrl
+    plan.raceUrl,
+    distance
   );
 
   await updatePlan(planId, { generatedHtml: html });

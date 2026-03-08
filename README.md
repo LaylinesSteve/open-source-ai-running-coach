@@ -54,4 +54,13 @@ cp .env.example .env   # fill in PASSKEY, KV_*, Strava, NEXT_PUBLIC_APP_URL
 npm run dev
 ```
 
-Open [http://localhost:3000/app](http://localhost:3000/app), enter your passkey, then use the form. For Strava OAuth locally, set **`NEXT_PUBLIC_APP_URL=http://localhost:3000`** and add `http://localhost:3000/api/auth/strava/callback` as a redirect URI in your Strava app settings.
+Open [http://localhost:3000/app](http://localhost:3000/app), enter your passkey, then use the form.
+
+### Strava “invalid redirect_uri”
+
+Strava requires the redirect URL to match your app settings. Do both:
+
+1. **NEXT_PUBLIC_APP_URL** — Set to your app’s full URL with **no trailing slash**, e.g. `https://ai-fitness-coach.vercel.app` or `http://localhost:3000`.
+2. **Strava API app** — [Strava → My API Application](https://www.strava.com/settings/api) → **Authorization Callback Domain**: enter **only the domain** (no `https://`, no path), e.g. `ai-fitness-coach.vercel.app` or `localhost`.
+
+The app uses this callback URL: `{NEXT_PUBLIC_APP_URL}/api/auth/strava/callback`. The domain in that URL must match the Authorization Callback Domain in Strava.

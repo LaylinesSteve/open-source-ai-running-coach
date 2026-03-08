@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Missing state (plan id)' }, { status: 400 });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).replace(/\/$/, '');
   const redirectUri = `${baseUrl}/api/auth/strava/callback`;
   const url = getStravaAuthUrl(state, redirectUri);
   return NextResponse.redirect(url);

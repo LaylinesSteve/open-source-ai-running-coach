@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasAccess } from '@/lib/auth';
 import { setPlan } from '@/lib/store';
+import { getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -11,8 +12,9 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json().catch(() => ({}));
   const raceUrl = (body.raceUrl || '').trim();
-  const raceName = (body.raceName || 'Trail 50K').trim();
+  const raceName = (body.raceName || 'Marathon').trim();
   const raceDate = (body.raceDate || '').trim(); // YYYY-MM-DD
+  const distance = (body.distance || 'Marathon').trim() || 'Marathon';
   const goal = (body.goal || '').trim() || undefined;
   const targetTime = (body.targetTime || '').trim() || undefined;
   const additionalInfo = (body.additionalInfo || '').trim() || undefined;
@@ -26,13 +28,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid race date' }, { status: 400 });
   }
 
+  const weeks = getDefaultWeeksForDistance(distance);
   const id = randomUUID().slice(0, 8);
   await setPlan({
     id,
     raceUrl: raceUrl || '',
     raceName,
     raceDate,
-    weeks: 11,
+    weeks,
+    distance,
     goal,
     targetTime,
     additionalInfo,
