@@ -1,4 +1,31 @@
+import type { Metadata } from 'next';
 import Footer from '@/app/components/Footer';
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://running.andersonventuregroup.com';
+
+export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl),
+  title: {
+    default: 'Your race. Your plan. | Personalized training plans',
+    template: '%s | Training plans',
+  },
+  description: 'Free, personalized training plans from your goal, your date, and your Strava. Create a plan tailored to your race and stay on track with sync and coach tips.',
+  openGraph: {
+    title: 'Your race. Your plan. | Personalized training plans',
+    description: 'Free, personalized training plans from your goal, your date, and your Strava. Create a plan tailored to your race and stay on track.',
+    url: baseUrl,
+    siteName: 'Training plans',
+    images: [{ url: '/meta-image.png', width: 1200, height: 630, alt: 'Your race. Your plan.' }],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Your race. Your plan. | Personalized training plans',
+    description: 'Free, personalized training plans from your goal, your date, and your Strava.',
+    images: ['/meta-image.png'],
+  },
+};
 
 export default function RootLayout({
   children,
