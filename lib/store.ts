@@ -140,3 +140,44 @@ export async function updatePlan(id: string, updates: Partial<PlanRecord>): Prom
   if (!existing) return;
   await setPlan({ ...existing, ...updates });
 }
+
+export interface PlanSummaryItem {
+  id: string;
+  name: string;
+  raceName: string;
+  raceDate: string;
+  distance?: string;
+  createdAt: string;
+  runsLogged: number;
+}
+
+/** List all plans with summary fields (for admin dashboard). */
+export async function listAllPlansSummary(): Promise<PlanSummaryItem[]> {
+  const upstash = getUpstashRedis();
+  let keys: string[] = [];
+  if (upstash) {
+    keys = (await upstash.keys(PREFIX + '*')) as string[];
+  } else {
+    const client = await getNodeRedis();
+    if (!client) return [];
+    keys = await client.keys(PREFIX + '*');
+  }
+  const ids = keys.map((k) => k.startsWith(PREFIX) ? k.slice(PREFIX.length) : k).filter(Boolean);
+  const summaries: PlanSummaryItem[] = [];
+  for (const id of ids) {
+    const plan = await getPlan(id);
+    if (!plan) continue;
+    const name = [plan.firstName, plan.lastName].filter(Boolean).join(' ').trim() || '—';
+    summaries.push({
+      id: plan.id,
+      name,
+      raceName: plan.raceName,
+      raceDate: plan.raceDate,
+      distance: plan.distance,
+      createdAt: plan.createdAt,
+      runsLogged: plan.runLog?.length ?? 0,
+    });
+  }
+  summaries.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  return summaries;
+}
