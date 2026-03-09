@@ -132,12 +132,11 @@ export default function HomePage() {
         <section
           className="landing-hero-bg"
           style={{
-            minHeight: '100vh',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: 'clamp(24px, 6vw, 64px) 24px',
+            padding: 'clamp(24px, 6vw, 64px) 24px clamp(24px, 4vh, 48px) 24px',
             position: 'relative',
             overflow: 'hidden',
           }}
@@ -329,7 +328,7 @@ export default function HomePage() {
             {[
               {
                 title: 'Tailored to you',
-                body: 'Your race date, distance, and goal—plus optional Strava history—shape a plan that matches where you are.',
+                body: 'Your race date, distance, and goal. Your Strava history and feedback shape a plan that adapts as you go.',
               },
               {
                 title: 'Coach in your corner',

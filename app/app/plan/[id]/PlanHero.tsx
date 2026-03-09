@@ -26,7 +26,7 @@ export default function PlanHero({
     <header
       style={{
         position: 'relative',
-        minHeight: '100vh',
+        minHeight: '85vh',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -38,15 +38,11 @@ export default function PlanHero({
     >
       <style>{`
         @keyframes planHeroScrollBounce {
-          0%, 100% { transform: translateX(-50%) translateY(0); }
-          50% { transform: translateX(-50%) translateY(6px); }
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(6px); }
         }
         .plan-hero-scroll-hint {
-          position: absolute;
-          bottom: 2rem;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
+          display: inline-flex;
           flex-direction: column;
           align-items: center;
           gap: 0.5rem;
@@ -123,7 +119,7 @@ export default function PlanHero({
           Race info
         </a>
       )}
-      <a href="#progress" className="plan-hero-scroll-hint" aria-label="Scroll to plan">
+      <a href="#progress" className="plan-hero-scroll-hint" aria-label="Scroll to plan" style={{ marginTop: '2rem' }}>
         Scroll
       </a>
     </header>
