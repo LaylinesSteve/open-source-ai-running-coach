@@ -3,7 +3,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/', (req, res) => {
-    res.send('AI Fitness Coach API');
+    res.send('Open Source AI Running Coach API');
 });
 
 app.listen(PORT, () => {

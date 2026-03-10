@@ -1,13 +1,13 @@
-# AI Fitness Coach
+# Open Source AI Running Coach
 
-Trail 50K training plan generator: your plan at `/`, and a flow to connect Strava, enter your race, and get a generated plan.
+A Strava + AI running coach that builds **personalized training plans for any goal and experience level**—whether you’re training for a 5K, marathon, ultra, or something in between.
 
 ## What's in the repo
 
-- **`/`** (and **`/training-plan.html`**) — Static training plan (May 23, 2026 example).
+- **`/`** (and **`/training-plan.html`**) — Sample static training plan you can view before signing up.
 - **`/app`** — Same landing as `/`.
-- **`/app/form`** — Form: race name, race date, link to race, optional "Connect Strava". Submit → create plan → redirect to Strava (if checked) or to their plan page.
-- **`/app/plan/[id]`** — Generated 11-week plan for that user (shareable link). If they connected Strava, an AI uses their running history to personalize the plan; otherwise it's generated from race date only.
+- **`/app/form`** — Form: your goal (race name or distance), race date, optional link, optional "Connect Strava". Submit → create plan → redirect to Strava (if checked) or to your plan page.
+- **`/app/plan/[id]`** — Your generated plan (shareable link). If you connected Strava, the AI uses your running history to personalize the plan for your current fitness; otherwise it’s built from your goal and date. Works for any distance and experience level.
 
 ## Environment variables
 
