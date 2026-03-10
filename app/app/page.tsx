@@ -231,7 +231,7 @@ export default function HomePage() {
                 Create my training plan
               </button>
               <a
-                href="https://running.andersonventuregroup.com/training-plan.html"
+                href="/training-plan.html"
                 className="landing-sample-link"
                 style={{
                   fontSize: '0.85rem',

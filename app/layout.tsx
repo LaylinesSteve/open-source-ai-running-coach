@@ -1,7 +1,9 @@
 import type { Metadata } from 'next';
 import Footer from '@/app/components/Footer';
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://running.andersonventuregroup.com';
+const baseUrl =
+  process.env.NEXT_PUBLIC_APP_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),

@@ -1,4 +1,7 @@
 export default function Footer() {
+  const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
+  const copyright = process.env.NEXT_PUBLIC_COPYRIGHT;
+
   return (
     <footer
       style={{
@@ -15,17 +18,27 @@ export default function Footer() {
       <p style={{ marginBottom: '0.5rem', fontStyle: 'italic' }}>
         Consult your physician before starting any training plan or exercise program.
       </p>
-      <p style={{ marginBottom: '0.25rem' }}>
-        © 2026 Anderson Venture Group LLC. All rights reserved.
-      </p>
+      {copyright && (
+        <p style={{ marginBottom: '0.25rem' }}>
+          {copyright}
+        </p>
+      )}
       <p>
-        Contact us with feedback at{' '}
-        <a
-          href="mailto:steve@andersonventuregroup.com"
-          style={{ color: '#e85d04', textDecoration: 'none' }}
-        >
-          steve@andersonventuregroup.com
-        </a>
+        {contactEmail ? (
+          <>
+            Contact us with feedback at{' '}
+            <a
+              href={`mailto:${contactEmail}`}
+              style={{ color: '#e85d04', textDecoration: 'none' }}
+            >
+              {contactEmail}
+            </a>
+          </>
+        ) : (
+          <>
+            Feedback? Open an issue in the project repository.
+          </>
+        )}
       </p>
     </footer>
   );
