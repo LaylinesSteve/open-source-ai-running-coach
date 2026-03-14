@@ -118,6 +118,13 @@ export default function HomePage() {
           border-color: #e85d04;
           background: rgba(232, 93, 4, 0.08);
         }
+        .landing-hero-github-link {
+          color: #e85d04;
+          text-decoration: none;
+        }
+        .landing-hero-github-link:hover {
+          text-decoration: underline;
+        }
       `}</style>
 
       <div
@@ -154,7 +161,15 @@ export default function HomePage() {
                 transition: 'opacity 0.7s ease 0.1s, transform 0.7s ease 0.1s',
               }}
             >
-              Personalized training for your race
+              Free open source tool for the running community. Find the{' '}
+              <a
+                href="https://github.com/LaylinesSteve/open-source-ai-running-coach"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="landing-hero-github-link"
+              >
+                codebase on GitHub
+              </a>
             </p>
             <h1
               style={{
