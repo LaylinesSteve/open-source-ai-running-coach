@@ -8,23 +8,25 @@ const baseUrl =
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: 'Your race. Your plan. | Personalized training plans',
-    template: '%s | Training plans',
+    default: 'Free Open Source Running Coach | Your race. Your plan.',
+    template: '%s | Open Source AI Running Coach',
   },
-  description: 'Free, personalized training plans from your goal, your date, and your Strava. Create a plan tailored to your race and stay on track with sync and coach tips.',
+  description:
+    'Free, open source running coach. Personalized training plans from your goal, your date, and Strava. Create your plan for any distance. No cost.',
   openGraph: {
-    title: 'Your race. Your plan. | Personalized training plans',
-    description: 'Free, personalized training plans from your goal, your date, and your Strava. Create a plan tailored to your race and stay on track.',
+    title: 'Free Open Source Running Coach | Your race. Your plan.',
+    description:
+      'Free, open source running coach. Personalized training plans from your goal, your date, and Strava. Any distance.',
     url: baseUrl,
-    siteName: 'Training plans',
-    images: [{ url: '/meta-image.png', width: 1200, height: 630, alt: 'Your race. Your plan.' }],
+    siteName: 'Open Source AI Running Coach',
+    images: [{ url: '/meta-image.png', width: 1200, height: 630, alt: 'Free open source running coach' }],
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Your race. Your plan. | Personalized training plans',
-    description: 'Free, personalized training plans from your goal, your date, and your Strava.',
+    title: 'Free Open Source Running Coach | Your race. Your plan.',
+    description: 'Free, open source running coach. Personalized plans from your goal and Strava.',
     images: ['/meta-image.png'],
   },
 };

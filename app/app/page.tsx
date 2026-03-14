@@ -213,7 +213,7 @@ export default function HomePage() {
                 transition: 'opacity 0.7s ease 0.35s, transform 0.7s ease 0.35s',
               }}
             >
-              Free, personalized plans from your goal, your date, and your Strava. Show up ready.
+              A free running coach powered by Strava and AI. Personalized plans from your goal, your date, and your runs—open source for the running community.
             </p>
             <div
               style={{
