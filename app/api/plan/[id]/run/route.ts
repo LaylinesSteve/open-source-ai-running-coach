@@ -70,3 +70,43 @@ export async function POST(
 
   return NextResponse.json({ ok: true, run: entry });
 }
+
+/** Remove a manually added run (stravaId === 0). Body: { date: "YYYY-MM-DD", distanceMi?: number }. */
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id: planId } = await params;
+  const plan = await getPlan(planId);
+  if (!plan) {
+    return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+  }
+
+  let body: { date?: string; distanceMi?: number };
+  try {
+    body = await request.json().catch(() => ({}));
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+  const dateStr = body.date?.slice(0, 10);
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return NextResponse.json({ error: 'date (YYYY-MM-DD) required' }, { status: 400 });
+  }
+
+  const existing = plan.runLog ?? [];
+  const matches = (r: LoggedRun) =>
+    r.stravaId === 0 &&
+    r.date === dateStr &&
+    (body.distanceMi == null || r.distanceMi === body.distanceMi);
+  const firstMatchIndex = existing.findIndex(matches);
+  if (firstMatchIndex === -1) {
+    return NextResponse.json(
+      { error: 'No manual run found for that date' + (body.distanceMi != null ? ' and distance' : '') },
+      { status: 404 }
+    );
+  }
+  const runLog = existing.filter((_, i) => i !== firstMatchIndex);
+
+  await updatePlan(planId, { runLog });
+  return NextResponse.json({ ok: true, removed: true });
+}
