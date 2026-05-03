@@ -4,6 +4,7 @@
  */
 
 import { clampPlanWeeks, getDefaultWeeksForDistance } from '@/lib/race-distances';
+import { endOfSundayWeek, startOfMondayWeekContaining } from '@/lib/training-week-calendar';
 
 export interface PlanWeek {
   num: number;
@@ -97,8 +98,9 @@ export function generatePlanWeeks(
   const weeks: PlanWeek[] = [];
   for (let i = 0; i < numWeeks; i++) {
     const sat = weekSaturdays[i];
-    const mon = addDays(sat, -6);
-    const range = `${formatDate(mon)}–${formatDate(sat)}`;
+    const weekMonday = startOfMondayWeekContaining(sat);
+    const weekSunday = endOfSundayWeek(weekMonday);
+    const range = `${formatDate(weekMonday)}–${formatDate(weekSunday)}`;
     const isRaceWeek = i === numWeeks - 1;
     const longRun = isRaceWeek ? raceWeekLabel : `${longRuns[i]} mi`;
     const weeklyMi = isRaceWeek ? 0 : longRuns[i] * 2 + 4;

@@ -4,6 +4,7 @@ import type { LoggedRun } from '@/lib/store';
 import { getAccessTokenForPlan } from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
 import type { PlanWeek } from '@/lib/plan-generator';
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
 const MILES_PER_METER = 1 / 1609.34;
 const FEET_PER_METER = 3.28084;
@@ -16,13 +17,6 @@ function parseRunDay(dayStr: string): { month: number; day: number } | null {
   const day = parseInt(match[2], 10);
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;
   return { month, day };
-}
-
-/** Get plan start (Monday of week 1). */
-function getPlanStartDate(raceDate: string, weeks: number): Date {
-  const d = new Date(raceDate + 'T12:00:00');
-  d.setDate(d.getDate() - (weeks - 1) * 7 - 6); // back to Monday week 1
-  return d;
 }
 
 /** Format date as "Tue 3/17" for display. */
@@ -113,7 +107,8 @@ export async function POST(
     return NextResponse.json({ error: 'Could not get Strava access' }, { status: 401 });
   }
 
-  const planStart = getPlanStartDate(plan.raceDate, plan.weeks);
+  const totalWeeks = plan.weeksData?.length ?? plan.weeks;
+  const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
   const after = Math.floor(planStart.getTime() / 1000);
 
   const activities = await fetchStravaActivities(accessToken, 200, { after });

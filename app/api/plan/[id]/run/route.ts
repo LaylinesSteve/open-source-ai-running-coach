@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import type { LoggedRun } from '@/lib/store';
-
-function getPlanStartDate(raceDate: string, weeks: number): Date {
-  const d = new Date(raceDate + 'T12:00:00');
-  d.setDate(d.getDate() - (weeks - 1) * 7 - 6);
-  return d;
-}
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -53,7 +48,8 @@ export async function POST(
       ? Math.min(10, Math.max(1, Math.round(Number(perceivedIntensity))))
       : undefined;
 
-  const planStart = getPlanStartDate(plan.raceDate, plan.weeks);
+  const totalWeeks = plan.weeksData?.length ?? plan.weeks;
+  const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
   const entry: LoggedRun = {
     stravaId: 0,
     date: dateStr,

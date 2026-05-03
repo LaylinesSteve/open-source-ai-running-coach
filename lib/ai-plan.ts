@@ -2,6 +2,7 @@ import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
 import { clampPlanWeeks, getDefaultWeeksForDistance, MAX_PLAN_WEEKS } from '@/lib/race-distances';
 import { isUltraDistance, ultraTrainingPromptBlock } from '@/lib/ultra-training-prompt';
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 import { refreshStravaToken, fetchStravaActivities, type StravaActivity } from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
 
@@ -332,12 +333,6 @@ export interface AdaptPlanResult {
   suggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
 }
 
-function getPlanStartDate(raceDate: string, weeks: number): Date {
-  const d = new Date(raceDate + 'T12:00:00');
-  d.setDate(d.getDate() - (weeks - 1) * 7 - 6);
-  return d;
-}
-
 /** Build context string for adaptation: plan, current weeks, run log, sync summary. */
 export function buildAdaptationContext(
   plan: PlanRecord,
@@ -351,7 +346,7 @@ export function buildAdaptationContext(
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const totalWeeks = weeksData.length || plan.weeks || 12;
-  const planStart = getPlanStartDate(plan.raceDate, totalWeeks);
+  const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
   const diffDays = Math.floor((now.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000));
   const currentWeekNum = Math.max(1, Math.min(totalWeeks, Math.floor(diffDays / 7) + 1));
   const todayLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });

@@ -1,3 +1,5 @@
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
+
 export default function PlanHero({
   athleteName,
   distance,
@@ -17,8 +19,7 @@ export default function PlanHero({
     day: 'numeric',
     year: 'numeric',
   });
-  const startDateObj = new Date(raceDateObj);
-  startDateObj.setDate(startDateObj.getDate() - (weeks - 1) * 7);
+  const startDateObj = getPlanWeek1Monday(raceDate, weeks);
   const startDate = startDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   const endDate = raceDateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 

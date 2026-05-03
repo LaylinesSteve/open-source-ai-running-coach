@@ -1,5 +1,6 @@
 import type { PlanWeek } from '@/lib/plan-generator';
 import type { LoggedRun } from '@/lib/store';
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
 export interface MergedRun {
   dateStr: string;
@@ -10,13 +11,6 @@ export interface MergedRun {
 
 export interface MergedWeek extends Omit<PlanWeek, 'runs'> {
   runs: MergedRun[];
-}
-
-/** Get plan start (Monday of week 1). */
-function getPlanStartDate(raceDate: string, weeks: number): Date {
-  const d = new Date(raceDate + 'T12:00:00');
-  d.setDate(d.getDate() - (weeks - 1) * 7 - 6);
-  return d;
 }
 
 /** Parse "Tue 3/17" to { month, day }. */
@@ -43,7 +37,7 @@ export function mergeWeeksWithRunLog(
   raceDate: string,
   totalWeeks: number
 ): MergedWeek[] {
-  const planStart = getPlanStartDate(raceDate, totalWeeks);
+  const planStart = getPlanWeek1Monday(raceDate, totalWeeks);
   const runLogByWeek = new Map<number, LoggedRun[]>();
   for (const r of runLog) {
     const list = runLogByWeek.get(r.weekNum) ?? [];

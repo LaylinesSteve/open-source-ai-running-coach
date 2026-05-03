@@ -7,6 +7,7 @@ import {
   MIN_PLAN_WEEKS,
   MAX_PLAN_WEEKS,
   clampPlanWeeks,
+  weeksFromNowToRaceWeek,
 } from '@/lib/race-distances';
 
 function defaultWeeksForDistance(d: string): number {
@@ -54,8 +55,11 @@ function FormContent() {
   }, [searchParams]);
 
   useEffect(() => {
-    setPlanWeeks(defaultWeeksForDistance(distance));
-  }, [distance]);
+    const trimmed = raceDate.trim();
+    if (!trimmed) return;
+    const w = weeksFromNowToRaceWeek(trimmed);
+    if (w != null) setPlanWeeks(w);
+  }, [raceDate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +115,9 @@ function FormContent() {
     }
   };
 
+  const raceDateTrimmed = raceDate.trim();
+  const suggestedWeeksFromRace = raceDateTrimmed ? weeksFromNowToRaceWeek(raceDateTrimmed) : null;
+
   return (
     <div
       style={{
@@ -129,7 +136,7 @@ function FormContent() {
           Your race plan
         </h1>
         <p style={{ color: '#737373', fontSize: '0.9rem', marginBottom: 24 }}>
-          We’ll generate a training plan for your race distance and date.
+          We’ll build a plan from your race date—by default from this week through race week—and tailor it to your distance.
         </p>
         <form onSubmit={submit}>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
@@ -253,6 +260,46 @@ function FormContent() {
             }}
           />
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
+            How many weeks should the plan cover? <span style={{ color: '#e85d04' }}>*</span>
+          </label>
+          <input
+            type="number"
+            min={MIN_PLAN_WEEKS}
+            max={MAX_PLAN_WEEKS}
+            value={planWeeks}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              setPlanWeeks(Number.isFinite(v) ? v : planWeeks);
+            }}
+            onBlur={() => setPlanWeeks((w) => clampPlanWeeks(w))}
+            required
+            style={{
+              width: '100%',
+              padding: '12px 16px',
+              background: '#141414',
+              border: '1px solid #262626',
+              borderRadius: 8,
+              color: '#f5f5f5',
+              fontSize: 16,
+              marginBottom: 8,
+            }}
+          />
+          <p style={{ color: '#737373', fontSize: '0.8rem', marginBottom: 16, lineHeight: 1.45 }}>
+            {suggestedWeeksFromRace != null ? (
+              <>
+                Defaults to {suggestedWeeksFromRace} weeks—from this calendar week through your race week (Monday-aligned). Adjust if you want fewer weeks or more buildup before race week (max {MAX_PLAN_WEEKS}).
+              </>
+            ) : raceDateTrimmed ? (
+              <>
+                This race date isn’t ahead of the current week in our calendar math, or it’s invalid—set weeks manually ({MIN_PLAN_WEEKS}–{MAX_PLAN_WEEKS}). Many athletes use about {defaultWeeksForDistance(distance)} weeks for this distance.
+              </>
+            ) : (
+              <>
+                After you choose a race date, we’ll suggest the week count from now through race week. You can always edit it ({MIN_PLAN_WEEKS}–{MAX_PLAN_WEEKS} weeks).
+              </>
+            )}
+          </p>
+          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Race distance
           </label>
           <select
@@ -275,33 +322,6 @@ function FormContent() {
               </option>
             ))}
           </select>
-          <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
-            Plan length (weeks)
-          </label>
-          <input
-            type="number"
-            min={MIN_PLAN_WEEKS}
-            max={MAX_PLAN_WEEKS}
-            value={planWeeks}
-            onChange={(e) => {
-              const v = parseInt(e.target.value, 10);
-              setPlanWeeks(Number.isFinite(v) ? v : planWeeks);
-            }}
-            onBlur={() => setPlanWeeks((w) => clampPlanWeeks(w))}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              background: '#141414',
-              border: '1px solid #262626',
-              borderRadius: 8,
-              color: '#f5f5f5',
-              fontSize: 16,
-              marginBottom: 8,
-            }}
-          />
-          <p style={{ color: '#737373', fontSize: '0.8rem', marginBottom: 16, lineHeight: 1.45 }}>
-            Default for this distance is {defaultWeeksForDistance(distance)} weeks. Use a higher number for a longer buildup (up to {MAX_PLAN_WEEKS} weeks).
-          </p>
           <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: 6, color: '#a3a3a3' }}>
             Link to race (optional)
           </label>
