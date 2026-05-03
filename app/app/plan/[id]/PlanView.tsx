@@ -1,7 +1,7 @@
 'use client';
 
-import Link from 'next/link';
 import React from 'react';
+import SyncButton from './SyncButton';
 
 /** Override so "Build to race day" bars are height-proportional for both new and legacy stored plans. */
 const progressBarChartOverride = `
@@ -10,30 +10,19 @@ const progressBarChartOverride = `
 .plan-sync-strava-sticky:hover { background: rgba(232, 93, 4, 0.12) !important; color: #ff6b1a !important; }
 `;
 
-function PlanView({ html, planId }: { html: string; planId: string }) {
+function PlanView({
+  html,
+  planId,
+  hasStrava,
+}: {
+  html: string;
+  planId: string;
+  hasStrava?: boolean;
+}) {
   return (
     <div style={{ position: 'relative' }}>
       <style dangerouslySetInnerHTML={{ __html: progressBarChartOverride }} />
-      <Link
-        href={`/app/plan/${planId}/sync`}
-        className="plan-sync-strava-sticky"
-        style={{
-          position: 'fixed',
-          top: 16,
-          right: 16,
-          zIndex: 10,
-          padding: '8px 12px',
-          background: '#0a0a0a',
-          color: '#e85d04',
-          border: '1px solid #e85d04',
-          borderRadius: 8,
-          fontSize: '0.85rem',
-          fontWeight: 600,
-          textDecoration: 'none',
-        }}
-      >
-        Sync Strava
-      </Link>
+      {hasStrava ? <SyncButton planId={planId} variant="sticky" /> : null}
       <div
         className="plan-content"
         dangerouslySetInnerHTML={{ __html: html }}
@@ -44,4 +33,11 @@ function PlanView({ html, planId }: { html: string; planId: string }) {
 }
 
 // Prevent re-renders when content unchanged so expanding a week doesn't reset the DOM
-export default React.memo(PlanView, (prev, next) => prev.planId === next.planId && prev.html.length === next.html.length && prev.html === next.html);
+export default React.memo(
+  PlanView,
+  (prev, next) =>
+    prev.planId === next.planId &&
+    prev.hasStrava === next.hasStrava &&
+    prev.html.length === next.html.length &&
+    prev.html === next.html
+);

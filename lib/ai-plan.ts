@@ -2,8 +2,14 @@ import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
 import { clampPlanWeeks, getDefaultWeeksForDistance, MAX_PLAN_WEEKS } from '@/lib/race-distances';
 import { isUltraDistance, ultraTrainingPromptBlock } from '@/lib/ultra-training-prompt';
-import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
-import { refreshStravaToken, fetchStravaActivities, type StravaActivity } from '@/lib/strava';
+import { getPlanWeek1Monday, startOfMondayWeekContaining } from '@/lib/training-week-calendar';
+import {
+  countsTowardRunningVolume,
+  refreshStravaToken,
+  fetchStravaActivities,
+  stravaActivityLabel,
+  type StravaActivity,
+} from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
 
 const FIVE_MINUTES = 5 * 60;
@@ -29,22 +35,43 @@ export async function getAccessTokenForPlan(plan: PlanRecord): Promise<string | 
   return accessToken ?? plan.stravaAccessToken ?? null;
 }
 
-/** Build a text summary of the athlete's running from Strava activities for the AI. */
+/** Build a text summary of Strava activities for the AI (all types; running broken out for coaching). */
 export function buildStravaSummary(activities: StravaActivity[]): string {
-  const runs = activities.filter((a) => a.type === 'Run');
-  if (runs.length === 0) return 'No running activities in Strava.';
+  if (activities.length === 0) return 'No Strava activities returned.';
+
+  const label = (a: StravaActivity) => stravaActivityLabel({ sport_type: a.sport_type, type: a.type });
 
   const now = new Date();
   const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-  const recent = runs.filter((r) => new Date(r.start_date) >= sixMonthsAgo);
-  if (recent.length === 0) return 'No runs in the last 6 months.';
+  const recent = activities.filter((a) => new Date(a.start_date) >= sixMonthsAgo);
+  if (recent.length === 0) return 'No Strava activities in the last 6 months.';
+
+  const typeCounts = new Map<string, number>();
+  for (const a of recent) {
+    const t = label(a);
+    typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1);
+  }
+  const typeLines = [...typeCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([t, n]) => `${t}: ${n}`)
+    .join('; ');
+
+  const runs = recent.filter((a) => countsTowardRunningVolume(a.sport_type || a.type));
+  const lines: string[] = [
+    `Total Strava activities (last 6 months): ${recent.length}.`,
+    `By type: ${typeLines}.`,
+  ];
+
+  if (runs.length === 0) {
+    lines.push('No running-type activities in that window (runs/trail/virtual/treadmill).');
+    return lines.join('\n');
+  }
 
   const byWeek = new Map<string, { count: number; miles: number; longest: number }>();
-  for (const r of recent) {
+  for (const r of runs) {
     const d = new Date(r.start_date);
-    const weekStart = new Date(d);
-    weekStart.setDate(d.getDate() - d.getDay());
-    const key = weekStart.toISOString().slice(0, 10);
+    const mon = startOfMondayWeekContaining(d);
+    const key = `${mon.getFullYear()}-${String(mon.getMonth() + 1).padStart(2, '0')}-${String(mon.getDate()).padStart(2, '0')}`;
     const mi = (r.distance ?? 0) / 1609.34;
     const cur = byWeek.get(key) ?? { count: 0, miles: 0, longest: 0 };
     cur.count += 1;
@@ -54,16 +81,13 @@ export function buildStravaSummary(activities: StravaActivity[]): string {
   }
 
   const sortedWeeks = [...byWeek.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  const lines: string[] = [
-    `Total runs (last 6 months): ${recent.length}.`,
-    `Weekly summary (week starting Monday):`,
-  ];
+  lines.push(`Running-only weekly summary (week starting Monday):`);
   for (const [weekStart, { count, miles, longest }] of sortedWeeks.slice(-26)) {
     lines.push(`  ${weekStart}: ${count} runs, ${miles.toFixed(1)} mi, longest run ${longest.toFixed(1)} mi`);
   }
-  const totalMi = recent.reduce((s, r) => s + (r.distance ?? 0) / 1609.34, 0);
-  const avgPerRun = totalMi / recent.length;
-  lines.push(`Overall: ~${totalMi.toFixed(0)} mi total, ~${avgPerRun.toFixed(1)} mi/run average.`);
+  const totalMi = runs.reduce((s, r) => s + (r.distance ?? 0) / 1609.34, 0);
+  const avgPerRun = totalMi / runs.length;
+  lines.push(`Running overall: ~${totalMi.toFixed(0)} mi total, ~${avgPerRun.toFixed(1)} mi/run average.`);
   return lines.join('\n');
 }
 
@@ -365,11 +389,11 @@ export function buildAdaptationContext(
     '=== CURRENT PLAN (weekly goals) ===',
     ...weeksData.map((w) => `Week ${w.num} (${w.range}): ${w.miles} — ${w.phase}${w.raceWeek ? ' [RACE WEEK]' : ''}`),
     '',
-    '=== COMPLETED RUNS (run log) ===',
+    '=== SYNCED ACTIVITIES (run log — all Strava types; weekly comparisons use running volume only) ===',
   ];
 
   if (runLog.length === 0) {
-    lines.push('No runs logged yet.');
+    lines.push('No activities logged yet.');
   } else {
     const byWeek = new Map<number, LoggedRun[]>();
     for (const r of runLog) {
@@ -379,15 +403,23 @@ export function buildAdaptationContext(
     }
     const sortedWeeks = [...byWeek.entries()].sort((a, b) => a[0] - b[0]);
     for (const [weekNum, runs] of sortedWeeks) {
-      const totalMi = runs.reduce((s, r) => s + r.distanceMi, 0);
+      const runningMi = runs
+        .filter((r) => countsTowardRunningVolume(r.activityType))
+        .reduce((s, r) => s + r.distanceMi, 0);
       const planned = weeksData.find((w) => w.num === weekNum);
       const plannedMi = planned?.miles?.match(/\d+/) ? parseInt(planned.miles.replace(/\D/g, ''), 10) : null;
-      const vs = plannedMi != null ? ` (planned ~${plannedMi} mi)` : '';
-      lines.push(`Week ${weekNum}: ${runs.length} runs, ${Math.round(totalMi * 10) / 10} mi total${vs}`);
+      const vs = plannedMi != null ? ` (planned ~${plannedMi} mi running)` : '';
+      lines.push(
+        `Week ${weekNum}: ${runs.length} activities, ${Math.round(runningMi * 10) / 10} mi running volume${vs}`
+      );
       for (const r of runs.slice().sort((a, b) => a.date.localeCompare(b.date))) {
         const timeStr = r.movingTimeSec != null ? `, ${Math.round(r.movingTimeSec / 60)} min` : '';
         const rpeStr = r.perceivedIntensity != null ? `, RPE ${r.perceivedIntensity}` : '';
-        lines.push(`  ${r.date} ${r.name}: ${r.distanceMi} mi${timeStr}${rpeStr}`);
+        const typeStr =
+          r.activityType != null && r.activityType !== ''
+            ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
+            : 'Run';
+        lines.push(`  ${r.date} [${typeStr}] ${r.name}: ${r.distanceMi} mi${timeStr}${rpeStr}`);
       }
     }
   }

@@ -107,10 +107,30 @@ export async function fetchStravaActivities(
 
 export interface StravaActivity {
   id: number;
+  /** Legacy activity category (still present on many responses). */
   type: string;
+  /** Preferred categorization when present (Strava API). */
+  sport_type?: string;
   name: string;
   start_date: string;
   distance?: number;
   moving_time?: number;
   total_elevation_gain?: number;
+}
+
+/** Label shown in UI / logs (sport_type is usually more specific). */
+export function stravaActivityLabel(a: Pick<StravaActivity, 'sport_type' | 'type'>): string {
+  const raw = (a.sport_type || a.type || 'Activity').trim();
+  return raw.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+/**
+ * Whether this activity should count toward planned *running* mileage and weekly run totals.
+ * Other activities are still synced and shown with their type.
+ */
+export function countsTowardRunningVolume(activityType?: string): boolean {
+  if (activityType == null || activityType === '') return true;
+  const key = activityType.replace(/\s+/g, '').toLowerCase();
+  const allowed = new Set(['run', 'trailrun', 'virtualrun', 'treadmill']);
+  return allowed.has(key);
 }

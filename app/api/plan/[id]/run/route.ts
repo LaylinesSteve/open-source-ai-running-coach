@@ -56,6 +56,7 @@ export async function POST(
     weekNum: weekNumForDate(dateStr, planStart),
     dayLabel: dayLabel(dateStr),
     name: 'Manual run',
+    activityType: 'Run',
     distanceMi: Math.round(distanceMi * 10) / 10,
     movingTimeSec: movingTimeSec != null ? Math.round(movingTimeSec) : undefined,
     perceivedIntensity: rpe,

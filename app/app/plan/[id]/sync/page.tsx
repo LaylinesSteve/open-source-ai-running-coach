@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getPlan } from '@/lib/store';
 import Link from 'next/link';
-import SyncButton from './SyncButton';
+import { stravaActivityLabel } from '@/lib/strava';
+import SyncButton from '../SyncButton';
 import AddRunButton from '../AddRunButton';
 import AdaptButton from '../AdaptButton';
 
@@ -59,7 +60,7 @@ export default async function SyncPage({
         Training log
       </h1>
       <p style={{ color: '#a3a3a3', fontSize: '0.95rem', marginBottom: '2rem' }}>
-        All runs synced from Strava appear here and in your plan's weekly view. Sync to pull in new activities.
+        All Strava activities sync here (runs, rides, and more—each row shows the type). Weekly running totals on your plan still count run-like activities only.
       </p>
 
       {!hasStrava && (
@@ -76,9 +77,9 @@ export default async function SyncPage({
             </p>
       )}
 
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2.5rem', marginBottom: '0.75rem' }}>Run log</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 600, marginTop: '2.5rem', marginBottom: '0.75rem' }}>Activity log</h2>
           {runLog.length === 0 ? (
-            <p style={{ color: '#737373', fontSize: '0.9rem' }}>No runs yet. Sync Strava or add a run above.</p>
+            <p style={{ color: '#737373', fontSize: '0.9rem' }}>No activities yet. Sync Strava or add a run above.</p>
           ) : (
             <div style={{ background: '#141414', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
@@ -86,7 +87,8 @@ export default async function SyncPage({
                   <tr style={{ borderBottom: '1px solid #262626' }}>
                     <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
                     <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Week</th>
-                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Run</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Type</th>
+                    <th style={{ textAlign: 'left', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Name</th>
                     <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
                     <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
                     <th style={{ textAlign: 'right', padding: '0.75rem', color: '#737373', fontWeight: 500 }}>RPE</th>
@@ -97,11 +99,18 @@ export default async function SyncPage({
                     <tr key={r.stravaId !== 0 ? r.stravaId : `manual-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
                       <td style={{ padding: '0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
                       <td style={{ padding: '0.75rem' }}>{r.weekNum}</td>
+                      <td style={{ padding: '0.75rem', color: '#e85d04', fontSize: '0.8rem' }}>
+                        {r.activityType != null && r.activityType !== ''
+                          ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
+                          : 'Run'}
+                      </td>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ color: '#f5f5f5' }}>{r.name}</span>
                         {r.note && <span style={{ display: 'block', fontSize: '0.8rem', color: '#737373', marginTop: 2 }}>{r.note}</span>}
                       </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#22c55e' }}>{r.distanceMi} mi</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', color: '#22c55e' }}>
+                        {r.distanceMi > 0 ? `${r.distanceMi} mi` : '—'}
+                      </td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
                       <td style={{ padding: '0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{r.perceivedIntensity != null ? r.perceivedIntensity : '—'}</td>
                     </tr>

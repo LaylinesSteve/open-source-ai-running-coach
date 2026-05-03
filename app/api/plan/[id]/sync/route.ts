@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import type { LoggedRun } from '@/lib/store';
-import { getAccessTokenForPlan } from '@/lib/ai-plan';
-import { fetchStravaActivities } from '@/lib/strava';
-import type { PlanWeek } from '@/lib/plan-generator';
+import { adaptPlanWithAI, getAccessTokenForPlan } from '@/lib/ai-plan';
+import { countsTowardRunningVolume, fetchStravaActivities } from '@/lib/strava';
+import { generatePlanWeeks, type PlanWeek } from '@/lib/plan-generator';
 import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
+
+const SIX_MONTHS_SEC = 180 * 24 * 60 * 60;
 
 const MILES_PER_METER = 1 / 1609.34;
 const FEET_PER_METER = 3.28084;
@@ -54,9 +56,18 @@ function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string;
   return out;
 }
 
-/** Build run log entries from Strava activities (plan window only), deduped by stravaId. */
+/** Build activity log from Strava (plan window only), deduped by stravaId. All activity types included; type stored on each row. */
 function buildRunLog(
-  activities: { id: number; type: string; name: string; start_date: string; distance?: number; moving_time?: number; total_elevation_gain?: number }[],
+  activities: {
+    id: number;
+    type: string;
+    sport_type?: string;
+    name: string;
+    start_date: string;
+    distance?: number;
+    moving_time?: number;
+    total_elevation_gain?: number;
+  }[],
   planStart: Date,
   existingRunLog: LoggedRun[],
   plannedRuns: { date: string; planned: string }[]
@@ -65,20 +76,22 @@ function buildRunLog(
   const plannedByDate = new Map(plannedRuns.map((p) => [p.date, p.planned]));
 
   for (const a of activities) {
-    if (a.type !== 'Run') continue;
     if (byId.has(a.id)) continue;
 
     const dateStr = a.start_date.slice(0, 10);
+    const activityType = (a.sport_type || a.type || 'Activity').trim();
     const distanceMi = Math.round(((a.distance ?? 0) * MILES_PER_METER) * 10) / 10;
     const elevationFt = a.total_elevation_gain != null ? Math.round(a.total_elevation_gain * FEET_PER_METER) : undefined;
-    const note = plannedByDate.get(dateStr) ? `Planned: ${plannedByDate.get(dateStr)}` : undefined;
+    const plannedHint = plannedByDate.get(dateStr);
+    const note = plannedHint ? `Planned: ${plannedHint}` : undefined;
 
     byId.set(a.id, {
       stravaId: a.id,
       date: dateStr,
       weekNum: weekNumForDate(dateStr, planStart),
       dayLabel: dayLabel(dateStr),
-      name: a.name || 'Run',
+      name: a.name || activityType,
+      activityType,
       distanceMi,
       movingTimeSec: a.moving_time,
       elevationFt,
@@ -98,8 +111,22 @@ export async function POST(
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
   }
-  if (!plan.stravaRefreshToken || !plan.weeksData?.length) {
-    return NextResponse.json({ error: 'Plan has no Strava or no plan data' }, { status: 400 });
+  if (!plan.stravaRefreshToken) {
+    return NextResponse.json({ error: 'Plan has no Strava connected' }, { status: 400 });
+  }
+
+  let weeksData = plan.weeksData;
+  let weeksPersistPatch: Partial<{ weeksData: PlanWeek[]; weeks: number }> = {};
+  if (!weeksData?.length) {
+    if (!plan.generatedHtml) {
+      return NextResponse.json({ error: 'Plan has no week data yet — open the plan once to generate it' }, { status: 400 });
+    }
+    weeksData = generatePlanWeeks(
+      new Date(plan.raceDate + 'T12:00:00'),
+      plan.distance || 'Marathon',
+      plan.weeks
+    );
+    weeksPersistPatch = { weeksData, weeks: weeksData.length };
   }
 
   const accessToken = await getAccessTokenForPlan(plan);
@@ -107,17 +134,22 @@ export async function POST(
     return NextResponse.json({ error: 'Could not get Strava access' }, { status: 401 });
   }
 
-  const totalWeeks = plan.weeksData?.length ?? plan.weeks;
+  const totalWeeks = weeksData.length;
   const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
-  const after = Math.floor(planStart.getTime() / 1000);
+  const planStartSec = Math.floor(planStart.getTime() / 1000);
+  const sixMonthsAgoSec = Math.floor(Date.now() / 1000) - SIX_MONTHS_SEC;
+  /** Include at least 6 months of Strava history so logs aren’t empty when plan-window math doesn’t overlap recent training. */
+  const after = Math.min(planStartSec, sixMonthsAgoSec);
 
   const activities = await fetchStravaActivities(accessToken, 200, { after });
-  const plannedRuns = getPlannedRuns(plan.weeksData, planStart);
+  const plannedRuns = getPlannedRuns(weeksData, planStart);
   const existingRunLog = plan.runLog ?? [];
   const runLog = buildRunLog(activities, planStart, existingRunLog, plannedRuns);
 
+  /** Only running-like activities count toward matching planned run mileage on that date. */
   const byDate = new Map<string, number>();
   for (const r of runLog) {
+    if (!countsTowardRunningVolume(r.activityType)) continue;
     const cur = byDate.get(r.date) ?? 0;
     byDate.set(r.date, cur + r.distanceMi);
   }
@@ -137,9 +169,11 @@ export async function POST(
 
   const totalPlanned = plannedRuns.length;
   const totalCompleted = completed.length;
-  const summary = `${totalCompleted} of ${totalPlanned} planned runs completed · ${runLog.length} runs in log`;
+  const runningSynced = runLog.filter((r) => countsTowardRunningVolume(r.activityType)).length;
+  const summary = `${totalCompleted} of ${totalPlanned} planned runs completed · ${runningSynced} runs · ${runLog.length} activities in log`;
 
   await updatePlan(planId, {
+    ...weeksPersistPatch,
     lastSyncAt: new Date().toISOString(),
     runLog,
     syncResult: {
@@ -150,6 +184,32 @@ export async function POST(
     },
   });
 
+  /** Refresh coach advice from latest activity log (same flow as /adapt). */
+  let adaptation: { ok: true } | { ok: false; error?: string; skipped?: string } = { ok: false };
+  const refreshed = await getPlan(planId);
+  if (refreshed?.weeksData?.length && process.env.GEMINI_API_KEY) {
+    try {
+      const { coachNote, suggestedWeeks } = await adaptPlanWithAI(
+        refreshed,
+        refreshed.weeksData,
+        refreshed.runLog ?? []
+      );
+      await updatePlan(planId, {
+        adaptationNote: coachNote,
+        adaptationAt: new Date().toISOString(),
+        adaptationSuggestedWeeks: suggestedWeeks?.length ? suggestedWeeks : undefined,
+      });
+      adaptation = { ok: true };
+    } catch (e) {
+      adaptation = {
+        ok: false,
+        error: e instanceof Error ? e.message : 'Coach advice update failed',
+      };
+    }
+  } else if (!process.env.GEMINI_API_KEY) {
+    adaptation = { ok: false, skipped: 'AI not configured' };
+  }
+
   return NextResponse.json({
     ok: true,
     summary,
@@ -157,5 +217,6 @@ export async function POST(
     totalCompleted,
     runLogCount: runLog.length,
     completed: completed.slice(-30),
+    adaptation,
   });
 }

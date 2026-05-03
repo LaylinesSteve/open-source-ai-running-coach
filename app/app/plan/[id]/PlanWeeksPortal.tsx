@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { MergedWeek } from '@/lib/merge-runs';
+import { countsTowardRunningVolume, stravaActivityLabel } from '@/lib/strava';
 
 function formatDuration(sec?: number): string {
   if (sec == null) return '';
@@ -15,7 +16,7 @@ function formatDuration(sec?: number): string {
 function WeekCard({ week }: { week: MergedWeek }) {
   const cardClass = 'week-card' + (week.raceWeek ? ' race-week' : '');
   const completedMi = week.runs
-    .filter((r) => r.actual != null)
+    .filter((r) => r.actual != null && countsTowardRunningVolume(r.actual.activityType))
     .reduce((sum, r) => sum + r.actual!.distanceMi, 0);
   const plannedNum = parseInt(week.miles.replace(/[^\d]/g, ''), 10) || 0;
   const milesLabel =
@@ -48,12 +49,28 @@ function WeekCard({ week }: { week: MergedWeek }) {
             <div className="week-runs">
               {week.runs.map((r, i) => {
                 const isLong = r.planned?.long ?? false;
-                const dist = r.actual != null
-                  ? `${r.actual.distanceMi} mi`
-                  : r.planned?.dist ?? '';
-                const notes = r.actual != null
-                  ? [r.actual.name, formatDuration(r.actual.movingTimeSec), r.actual.perceivedIntensity != null ? `RPE ${r.actual.perceivedIntensity}` : null, r.actual.note].filter(Boolean).join(' · ')
-                  : (r.planned?.notes ?? '');
+                const dist =
+                  r.actual != null
+                    ? r.actual.distanceMi > 0
+                      ? `${r.actual.distanceMi} mi`
+                      : '—'
+                    : r.planned?.dist ?? '';
+                const typeHint =
+                  r.actual?.activityType != null && r.actual.activityType !== ''
+                    ? stravaActivityLabel({ sport_type: r.actual.activityType, type: r.actual.activityType })
+                    : null;
+                const notes =
+                  r.actual != null
+                    ? [
+                        typeHint ? `[${typeHint}]` : null,
+                        r.actual.name,
+                        formatDuration(r.actual.movingTimeSec),
+                        r.actual.perceivedIntensity != null ? `RPE ${r.actual.perceivedIntensity}` : null,
+                        r.actual.note,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : (r.planned?.notes ?? '');
                 const coachTip = r.planned?.coachTip?.trim();
                 return (
                   <div key={i} className={'run-row' + (isLong ? ' long' : '')}>

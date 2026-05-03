@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import AddRunButton from './AddRunButton';
 import AdaptButton from './AdaptButton';
+import SyncButton from './SyncButton';
 
 type SyncResult = {
   completed: { weekNum: number; dayLabel: string; planned: string; actualMi: number; date: string }[];
@@ -38,26 +38,10 @@ export default function SyncSection({
         Training log
       </p>
       <p style={{ color: '#a3a3a3', fontSize: '0.9rem', marginBottom: '1rem' }}>
-        Sync Strava or add runs manually. Completed miles show in each week.
+        Sync Strava (all activity types; weekly totals use runs) or add runs manually.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-        {hasStrava && (
-          <Link
-            href={`/app/plan/${planId}/sync`}
-            style={{
-              display: 'inline-block',
-              padding: '12px 20px',
-              background: '#e85d04',
-              color: '#fff',
-              fontWeight: 600,
-              borderRadius: 8,
-              textDecoration: 'none',
-              fontSize: '0.9rem',
-            }}
-          >
-            Update with recent Strava training
-          </Link>
-        )}
+        {hasStrava && <SyncButton planId={planId} />}
         <AddRunButton planId={planId} />
         <AdaptButton planId={planId} />
       </div>

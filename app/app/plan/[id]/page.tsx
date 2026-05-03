@@ -1,5 +1,8 @@
 import { redirect } from 'next/navigation';
 import { getPlan } from '@/lib/store';
+
+/** Per-plan data must not be statically cached (multiple plans, fresh Strava log). */
+export const dynamic = 'force-dynamic';
 import { generatePlanWeeks, planWeeksToHtml } from '@/lib/plan-generator';
 import {
   getAccessTokenForPlan,
@@ -88,7 +91,21 @@ export default async function PlanPage({
     });
   }
 
-  const hasSummary = stravaSummaryText || plan.goal || plan.targetTime || plan.additionalInfo || coachSummary || plan.adaptationNote || (plan.runLog?.length ?? 0) > 0;
+  /** Legacy plans: HTML exists but weeksData never saved — merge/sync/log need structured weeks. */
+  if ((!weeksData || weeksData.length === 0) && html) {
+    weeksData = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance, plan.weeks);
+    const { updatePlan } = await import('@/lib/store');
+    await updatePlan(id, { weeksData, weeks: weeksData.length });
+  }
+
+  const hasSummary =
+    stravaSummaryText ||
+    plan.goal ||
+    plan.targetTime ||
+    plan.additionalInfo ||
+    coachSummary ||
+    plan.adaptationNote ||
+    (plan.runLog?.length ?? 0) > 0;
   const baseHtml = stripHeroFromPlanHtml(html);
   const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
   const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
@@ -121,7 +138,7 @@ export default async function PlanPage({
           distance={distance}
         />
       )}
-      <PlanView html={planContentHtml} planId={id} />
+      <PlanView html={planContentHtml} planId={id} hasStrava={!!plan.stravaRefreshToken} />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       {mergedWeeks && mergedWeeks.length > 0 && (
         <WeekGoalCelebration

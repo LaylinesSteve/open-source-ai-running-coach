@@ -1,12 +1,21 @@
 import type { PlanWeek } from '@/lib/plan-generator';
 import type { LoggedRun } from '@/lib/store';
+import { countsTowardRunningVolume } from '@/lib/strava';
 import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
 export interface MergedRun {
   dateStr: string;
   dayLabel: string;
   planned?: { dist: string; notes: string; long?: boolean; coachTip?: string };
-  actual?: { name: string; distanceMi: number; movingTimeSec?: number; elevationFt?: number; perceivedIntensity?: number; note?: string };
+  actual?: {
+    name: string;
+    activityType?: string;
+    distanceMi: number;
+    movingTimeSec?: number;
+    elevationFt?: number;
+    perceivedIntensity?: number;
+    note?: string;
+  };
 }
 
 export interface MergedWeek extends Omit<PlanWeek, 'runs'> {
@@ -75,6 +84,7 @@ export function mergeWeeksWithRunLog(
       if (existing) {
         existing.actual = {
           name: r.name,
+          activityType: r.activityType,
           distanceMi: r.distanceMi,
           movingTimeSec: r.movingTimeSec,
           elevationFt: r.elevationFt,
@@ -87,6 +97,7 @@ export function mergeWeeksWithRunLog(
           dayLabel: r.dayLabel,
           actual: {
             name: r.name,
+            activityType: r.activityType,
             distanceMi: r.distanceMi,
             movingTimeSec: r.movingTimeSec,
             elevationFt: r.elevationFt,

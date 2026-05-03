@@ -74,6 +74,8 @@ export interface LoggedRun {
   weekNum: number;
   dayLabel: string;
   name: string;
+  /** Strava sport type / type (e.g. Run, Ride). Manual entries typically omit or "Run". */
+  activityType?: string;
   distanceMi: number;
   movingTimeSec?: number;
   elevationFt?: number;
