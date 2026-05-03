@@ -65,64 +65,77 @@ export default function PlanSummary({
 
       {(runLog.length > 0 || stravaSummaryText) && (
         <section style={sectionStyle}>
+          <style dangerouslySetInnerHTML={{ __html: `.plan-summary-recent-training summary::-webkit-details-marker{display:none}` }} />
           {runLog.length > 0 ? (
-            <div style={{ margin: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <details style={{ margin: 0 }} className="plan-summary-recent-training">
+              <summary
+                style={{
+                  cursor: 'pointer',
+                  listStyle: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  flexWrap: 'wrap',
+                }}
+              >
                 <span style={labelStyle}>Recent training</span>
                 <span style={{ ...mutedStyle, fontSize: '0.8rem' }}>
                   {runLog.length} activit{runLog.length === 1 ? 'y' : 'ies'}
                   {showPlanPhase ? ' — baseline + during plan' : ' — during plan'}
                 </span>
-              </div>
-              {stravaSummaryText && <p style={{ ...textStyle, marginBottom: '1rem' }}>{stravaSummaryText}</p>}
-              <div style={{ background: '#0a0a0a', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #262626' }}>
-                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
-                      {showPlanPhase && (
-                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>
-                          Plan
-                        </th>
-                      )}
-                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Type</th>
-                      <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Name</th>
-                      <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
-                      <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {runLog.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25).map((r, i) => (
-                      <tr key={r.stravaId !== 0 ? r.stravaId : `m-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
-                        <td style={{ padding: '0.6rem 0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
+                <span style={{ marginLeft: 'auto', color: '#737373', fontSize: '0.75rem' }}>▼</span>
+              </summary>
+              <div style={{ marginTop: '1rem' }}>
+                {stravaSummaryText && <p style={{ ...textStyle, marginBottom: '1rem' }}>{stravaSummaryText}</p>}
+                <div style={{ background: '#0a0a0a', border: '1px solid #262626', borderRadius: 8, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid #262626' }}>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
                         {showPlanPhase && (
-                          <td style={{ padding: '0.6rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
-                            {r.weekNum === 0 ? 'Baseline' : `Week ${r.weekNum}`}
-                          </td>
+                          <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>
+                            Plan
+                          </th>
                         )}
-                        <td style={{ padding: '0.6rem 0.75rem', color: '#e85d04', fontSize: '0.8rem' }}>
-                          {r.activityType != null && r.activityType !== ''
-                            ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
-                            : 'Run'}
-                        </td>
-                        <td style={{ padding: '0.6rem 0.75rem', color: '#f5f5f5' }}>{r.name}</td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#22c55e' }}>
-                          {r.distanceMi > 0 ? `${r.distanceMi} mi` : '—'}
-                        </td>
-                        <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Type</th>
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Name</th>
+                        <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
+                        <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Time</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {runLog.length > 25 && (
-                  <p style={{ padding: '0.5rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
-                    + {runLog.length - 25} more activities — full list on the training log section below
-                  </p>
-                )}
+                    </thead>
+                    <tbody>
+                      {runLog.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25).map((r, i) => (
+                        <tr key={r.stravaId !== 0 ? r.stravaId : `m-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
+                          {showPlanPhase && (
+                            <td style={{ padding: '0.6rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
+                              {r.weekNum === 0 ? 'Baseline' : `Week ${r.weekNum}`}
+                            </td>
+                          )}
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#e85d04', fontSize: '0.8rem' }}>
+                            {r.activityType != null && r.activityType !== ''
+                              ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
+                              : 'Run'}
+                          </td>
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#f5f5f5' }}>{r.name}</td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#22c55e' }}>
+                            {r.distanceMi > 0 ? `${r.distanceMi} mi` : '—'}
+                          </td>
+                          <td style={{ padding: '0.6rem 0.75rem', textAlign: 'right', color: '#a3a3a3' }}>{formatDuration(r.movingTimeSec)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {runLog.length > 25 && (
+                    <p style={{ padding: '0.5rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
+                      + {runLog.length - 25} more activities — full list on the training log section below
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            </details>
           ) : (
-            <details style={{ margin: 0 }}>
+            <details style={{ margin: 0 }} className="plan-summary-recent-training">
               <summary style={{ cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span style={labelStyle}>Recent training</span>
                 <span style={{ ...mutedStyle, fontSize: '0.8rem' }}>Strava summary</span>
