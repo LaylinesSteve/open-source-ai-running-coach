@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
   const distance = plan.distance || 'Marathon';
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
-  const weeks = generatePlanWeeks(raceDate, distance);
+  const weeks = generatePlanWeeks(raceDate, distance, plan.weeks);
   const html = planWeeksToHtml(
     weeks,
     plan.raceName,

@@ -1,6 +1,7 @@
 import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
-import { getDefaultWeeksForDistance } from '@/lib/race-distances';
+import { clampPlanWeeks, getDefaultWeeksForDistance, MAX_PLAN_WEEKS } from '@/lib/race-distances';
+import { isUltraDistance, ultraTrainingPromptBlock } from '@/lib/ultra-training-prompt';
 import { refreshStravaToken, fetchStravaActivities, type StravaActivity } from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
 
@@ -97,9 +98,11 @@ export async function generatePlanWithAI(
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
   const distance = plan.distance || 'Marathon';
-  const numWeeks = plan.weeks || getDefaultWeeksForDistance(distance);
+  const numWeeks = clampPlanWeeks(plan.weeks || getDefaultWeeksForDistance(distance));
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
   const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const ultraBlock = ultraTrainingPromptBlock(distance);
 
   const systemPrompt = `You are an expert running coach creating a personalized ${numWeeks}-week training plan for a ${distance} race. The plan must be realistic given the athlete's current training.
 - ${numWeeks} weeks total, ending on race day (week ${numWeeks} = race week). Include an appropriate taper before race day; let the athlete's context and distance guide taper length and structure—do not dictate a fixed taper.
@@ -109,7 +112,7 @@ export async function generatePlanWithAI(
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
 - Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
 - Also output "tips": an array of exactly 6 objects { "title": string, "description": string, "url": string (optional) }. Each tip should be about a topic that will interest this athlete given their goal, target time, recent training, and race distance—e.g. first marathon, trail/ultra fueling, taper, combining running with cross-training, injury prevention, pacing, mental preparation, race-day nutrition. Pick topics that match their situation so the tips feel personally relevant. For "url": only include a link if you know a real, working article URL that you are confident exists and matches the tip. Use full URLs to real articles from trusted sources (e.g. Runner's World, Trail Runner Magazine, iRunFar, Strength Running). Do not invent, guess, or construct URLs. If you are not certain a URL is valid and live, omit "url" for that tip—the tip will still display with title and description. It is better to have no URL than a broken link.
-- Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}`;
+- Output ONLY a valid JSON object with keys "weeks", "coachSummary", and "tips". No markdown, no code fence. ${PLAN_WEEK_JSON_SCHEMA(numWeeks, distance)}${ultraBlock ? `\n\n${ultraBlock}` : ''}`;
 
   const raceContext = [
     `Race: ${plan.raceName}. Distance: ${distance}. Race date: ${raceDateStr} (Saturday).`,
@@ -168,7 +171,7 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
     throw new Error('AI did not return any weeks');
   }
 
-  const n = rawWeeks.length;
+  const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
 
   // Normalize: ensure last week is race week with correct label
@@ -219,7 +222,15 @@ export async function revisePlanWithAI(
     2
   );
 
-  const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan. You will be given their context, current plan, their request, and (when available) previous revision requests and what you said in past responses. Maintain continuity: acknowledge prior context where relevant and keep your tone and advice consistent. Return a revised plan that addresses their request while keeping the same structure (same number of weeks, same race date ${raceDateStr}). Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of ${numWeeks} week objects, same schema as before) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.`;
+  const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan (week ${numWeeks} must remain race week on ${raceDateStr}). You will be given their context, current plan, their request, and (when available) previous revision requests and what you said in past responses. Maintain continuity: acknowledge prior context where relevant and keep your tone and advice consistent.
+
+Return a revised plan that addresses their request. The athlete may ask for a longer or shorter plan: if lengthening, add weeks at the beginning (extra base/build) while keeping the final week as race week on ${raceDateStr}; if shortening, remove weeks from the early/base portion while preserving an appropriate taper and race week. If they do not ask to change length, keep the same number of weeks (${numWeeks}). Week numbers in the output must run contiguously from 1 through N where week N is race week.
+
+Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of week objects, same schema as before; length equals the new plan length) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.${
+    isUltraDistance(distance)
+      ? ' For 50K and longer ultras, preserve hill power, fueling practice, vert/downhill resilience, cross-training options, and time-on-feet logic when revising.'
+      : ''
+  }`;
 
   const revisionHistory = (plan.revisionRequests ?? []).slice(-10);
   const coachHistory = (plan.coachSummaryHistory ?? []).slice(-10);
@@ -239,6 +250,8 @@ export async function revisePlanWithAI(
       ? `Most recent Strava sync (${plan.lastSyncAt}): ${plan.syncResult.summary}.`
       : '';
 
+  const ultraRevise = ultraTrainingPromptBlock(distance);
+
   const userPrompt = `Race: ${plan.raceName}. Distance: ${distance}. Date: ${raceDateStr}.
 ${plan.goal ? `Goal: ${plan.goal}.` : ''} ${plan.targetTime ? `Target time: ${plan.targetTime}.` : ''} ${plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : ''}
 ${contextBlock ? `\n${contextBlock}\n` : ''}
@@ -252,7 +265,7 @@ ${currentPlanJson}
 
 Athlete's current revision request: ${userRequest}
 
-Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day, dist, notes, long, and coachTip (1-2 sentences of coach voice: motivation, tip, or idea). Keep real dates; last week's longRun must be "${distance}".`;
+Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day, dist, notes, long, and coachTip (1-2 sentences of coach voice: motivation, tip, or idea). Keep real dates; last week's longRun must be "${distance}".${ultraRevise ? `\n\n${ultraRevise}` : ''}`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -291,7 +304,7 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
     throw new Error('AI did not return any weeks');
   }
 
-  const n = Math.min(rawWeeks.length, numWeeks);
+  const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
   const rawSlice = rawWeeks.slice(0, n) as unknown as Record<string, unknown>[];
   const normalized: PlanWeek[] = rawSlice.map((w, i) => ({
@@ -337,9 +350,10 @@ export function buildAdaptationContext(
 
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
-  const planStart = getPlanStartDate(plan.raceDate, plan.weeks || 12);
+  const totalWeeks = weeksData.length || plan.weeks || 12;
+  const planStart = getPlanStartDate(plan.raceDate, totalWeeks);
   const diffDays = Math.floor((now.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000));
-  const currentWeekNum = Math.max(1, Math.min(plan.weeks || 12, Math.floor(diffDays / 7) + 1));
+  const currentWeekNum = Math.max(1, Math.min(totalWeeks, Math.floor(diffDays / 7) + 1));
   const todayLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
   const lines: string[] = [
@@ -417,7 +431,13 @@ export async function adaptPlanWithAI(
 
 Use the exact context provided. Do not invent runs or numbers. Output ONLY a valid JSON object with:
 - "coachNote": string (the 2-4 sentence note for the athlete)
-- "suggestedWeeks": optional array of { "weekNum": number, "suggestedMiles": string (e.g. "~22 mi"), "note": string } for upcoming weeks that should change (only include weeks you want to suggest a change for)`;
+- "suggestedWeeks": optional array of { "weekNum": number, "suggestedMiles": string (e.g. "~22 mi"), "note": string } for upcoming weeks that should change (only include weeks you want to suggest a change for)
+
+${
+    isUltraDistance(distance)
+      ? `For ultramarathon athletes: judge load using time-on-feet, vert, fueling, and recovery—not mileage alone. Encourage cross-training or hiking swaps when reducing impact; respect downhill fatigue as real stress.`
+      : ''
+  }`;
 
   const userPrompt = `Context (use this as the single source of truth):
 

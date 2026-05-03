@@ -1,3 +1,12 @@
+/** Allowed plan length when the athlete overrides the default for their distance. */
+export const MIN_PLAN_WEEKS = 4;
+export const MAX_PLAN_WEEKS = 52;
+
+export function clampPlanWeeks(n: number): number {
+  if (!Number.isFinite(n)) return MIN_PLAN_WEEKS;
+  return Math.min(MAX_PLAN_WEEKS, Math.max(MIN_PLAN_WEEKS, Math.round(n)));
+}
+
 /** Common race distances and default plan length in weeks. */
 export const RACE_DISTANCE_OPTIONS: { value: string; label: string; weeks: number }[] = [
   { value: '5K', label: '5K', weeks: 6 },

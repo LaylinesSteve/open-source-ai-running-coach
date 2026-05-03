@@ -3,7 +3,7 @@
  * 50K uses the classic 11-week trail progression; other distances use a default week count and progression.
  */
 
-import { getDefaultWeeksForDistance } from '@/lib/race-distances';
+import { clampPlanWeeks, getDefaultWeeksForDistance } from '@/lib/race-distances';
 
 export interface PlanWeek {
   num: number;
@@ -58,8 +58,15 @@ function buildLongRuns(numWeeks: number, distance: string): number[] {
   return longRuns;
 }
 
-export function generatePlanWeeks(raceDate: Date, distance: string = 'Marathon'): PlanWeek[] {
-  const numWeeks = getDefaultWeeksForDistance(distance);
+export function generatePlanWeeks(
+  raceDate: Date,
+  distance: string = 'Marathon',
+  explicitWeeks?: number
+): PlanWeek[] {
+  const numWeeks =
+    explicitWeeks != null && Number.isFinite(explicitWeeks)
+      ? clampPlanWeeks(Math.round(explicitWeeks))
+      : getDefaultWeeksForDistance(distance);
   const raceSat = new Date(raceDate);
   raceSat.setHours(12, 0, 0, 0);
   const weekSaturdays: Date[] = [];
@@ -186,7 +193,7 @@ export function planWeeksToHtml(
     })
     .join('\n    ');
 
-  const gridCols = Math.min(numWeeks, 20);
+  const gridCols = Math.min(numWeeks, 52);
 
   return `<!DOCTYPE html>
 <html lang="en">

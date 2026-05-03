@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { setPlan } from '@/lib/store';
-import { getDefaultWeeksForDistance } from '@/lib/race-distances';
+import { clampPlanWeeks, getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
@@ -39,7 +39,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid race date' }, { status: 400 });
   }
 
-  const weeks = getDefaultWeeksForDistance(distance);
+  const rawWeeksVal = body.weeks ?? body.planWeeks;
+  let weeks = getDefaultWeeksForDistance(distance);
+  if (rawWeeksVal !== undefined && rawWeeksVal !== null && rawWeeksVal !== '') {
+    const parsed = typeof rawWeeksVal === 'number' ? rawWeeksVal : parseInt(String(rawWeeksVal), 10);
+    if (Number.isFinite(parsed)) weeks = clampPlanWeeks(parsed);
+  }
   const id = randomUUID().slice(0, 8);
   await setPlan({
     id,

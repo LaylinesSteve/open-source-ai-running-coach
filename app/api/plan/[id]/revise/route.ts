@@ -67,6 +67,7 @@ export async function POST(
     await updatePlan(planId, {
       generatedHtml: html,
       coachSummary: coachSummary || plan.coachSummary,
+      weeks: weeks.length,
       weeksData: weeks,
       revisionRequests,
       coachSummaryHistory,

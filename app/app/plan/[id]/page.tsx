@@ -50,7 +50,7 @@ export default async function PlanPage({
   let tips = plan.tips;
 
   if (!html) {
-    let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
+    let weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance, plan.weeks);
 
     if (plan.stravaRefreshToken && process.env.GEMINI_API_KEY) {
       try {
@@ -65,7 +65,7 @@ export default async function PlanPage({
           tips = result.tips?.length ? result.tips : undefined;
         }
       } catch {
-        weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance);
+        weeks = generatePlanWeeks(new Date(plan.raceDate + 'T12:00:00'), distance, plan.weeks);
       }
     }
 
@@ -81,6 +81,7 @@ export default async function PlanPage({
       generatedHtml: html,
       stravaSummaryText: stravaSummaryText || undefined,
       coachSummary: coachSummary || undefined,
+      weeks: weeksData.length,
       weeksData,
       tips: tips || undefined,
       coachSummaryHistory,
@@ -91,7 +92,7 @@ export default async function PlanPage({
   const baseHtml = stripHeroFromPlanHtml(html);
   const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
   const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
-  const numWeeks = plan.weeks || 12;
+  const numWeeks = weeksData?.length ?? plan.weeks ?? 12;
   const mergedWeeks = weeksData
     ? mergeWeeksWithRunLog(weeksData, plan.runLog ?? [], plan.raceDate, numWeeks)
     : undefined;
