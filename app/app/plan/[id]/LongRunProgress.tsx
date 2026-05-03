@@ -1,5 +1,6 @@
 import type { PlanWeek } from '@/lib/plan-generator';
-import { progressBarData } from '@/lib/plan-progress';
+import type { MergedWeek } from '@/lib/merge-runs';
+import { progressBarDataWithActuals } from '@/lib/plan-progress';
 
 const scopedCss = `
 .plan-long-run-progress {
@@ -19,6 +20,14 @@ const scopedCss = `
 .plan-long-run-progress .progress-section {
   background: var(--surface);
   padding: 4rem 1.5rem;
+}
+.plan-long-run-progress .progress-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: -1rem;
+  margin-bottom: 0.25rem;
+  max-width: 42rem;
+  line-height: 1.45;
 }
 .plan-long-run-progress .section-label {
   font-size: 0.7rem;
@@ -59,6 +68,9 @@ const scopedCss = `
 .plan-long-run-progress .progress-bar.taper {
   background: linear-gradient(180deg, var(--text-muted) 0%, #525252 100%);
 }
+.plan-long-run-progress .progress-bar.goal-met {
+  background: linear-gradient(180deg, var(--success) 0%, #4ade80 100%);
+}
 .plan-long-run-progress .progress-label {
   margin-top: 0.5rem;
   font-size: 0.7rem;
@@ -76,8 +88,16 @@ const scopedCss = `
 }
 `;
 
-export default function LongRunProgress({ weeks }: { weeks: PlanWeek[] }) {
-  const bars = progressBarData(weeks);
+export default function LongRunProgress({
+  weeks,
+  mergedWeeks,
+  raceDate,
+}: {
+  weeks: PlanWeek[];
+  mergedWeeks: MergedWeek[];
+  raceDate: string;
+}) {
+  const bars = progressBarDataWithActuals(weeks, mergedWeeks, raceDate);
   const gridCols = Math.min(weeks.length, 52);
 
   return (
@@ -86,6 +106,10 @@ export default function LongRunProgress({ weeks }: { weeks: PlanWeek[] }) {
       <section className="progress-section" id="progress">
         <p className="section-label">Long run progression</p>
         <h2 className="section-title font-display">Build to race day</h2>
+        <p className="progress-hint">
+          Past weeks show logged running miles (Strava). Green means you hit at least the planned weekly mileage target.
+          Upcoming weeks show planned volume from your plan.
+        </p>
         <div
           className="progress-grid"
           style={{ gridTemplateColumns: `repeat(${gridCols}, 1fr)` }}
@@ -93,7 +117,7 @@ export default function LongRunProgress({ weeks }: { weeks: PlanWeek[] }) {
           {bars.map((d) => (
             <div className="progress-bar-wrap" key={d.weekNum} data-week={d.weekNum}>
               <div className={`progress-bar ${d.barClass}`.trim()} style={{ height: `${d.pct}%` }} />
-              <span className="progress-label">{d.longRun}</span>
+              <span className="progress-label">{d.label}</span>
               <span className="progress-date">{d.datePart}</span>
             </div>
           ))}

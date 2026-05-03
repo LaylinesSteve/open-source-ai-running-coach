@@ -167,7 +167,7 @@ export function planWeeksToHtml(
   const progressBars = progressBarData(weeks)
     .map(
       (d) =>
-        `<div class="progress-bar-wrap" data-week="${d.weekNum}"><div class="progress-bar ${d.barClass}" style="height: ${d.pct}%;"></div><span class="progress-label">${escapeHtml(d.longRun)}</span><span class="progress-date">${escapeHtml(d.datePart)}</span></div>`
+        `<div class="progress-bar-wrap" data-week="${d.weekNum}"><div class="progress-bar ${d.barClass}" style="height: ${d.pct}%;"></div><span class="progress-label">${escapeHtml(d.label)}</span><span class="progress-date">${escapeHtml(d.datePart)}</span></div>`
     )
     .join('\n      ');
   const weekCardsHtml = weeks

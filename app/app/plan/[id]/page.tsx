@@ -156,7 +156,9 @@ export default async function PlanPage({
           distance={distance}
         />
       )}
-      {hasLiveWeeksUi && weeksData && <LongRunProgress weeks={weeksData} />}
+      {hasLiveWeeksUi && weeksData && mergedWeeks && (
+        <LongRunProgress weeks={weeksData} mergedWeeks={mergedWeeks} raceDate={plan.raceDate} />
+      )}
       <PlanView html={planContentHtml} planId={id} hasStrava={!!plan.stravaRefreshToken} />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       {mergedWeeks && mergedWeeks.length > 0 && (
