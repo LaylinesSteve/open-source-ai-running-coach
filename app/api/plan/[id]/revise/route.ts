@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import { getAccessTokenForPlan } from '@/lib/ai-plan';
-import { buildStravaSummary } from '@/lib/ai-plan';
+import { baselineFitnessFromRunLog, buildStravaSummary } from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
 import { revisePlanWithAI } from '@/lib/ai-plan';
 import { planWeeksToHtml } from '@/lib/plan-generator';
@@ -45,9 +45,12 @@ export async function POST(
   }
 
   try {
+    const baselineBlock = baselineFitnessFromRunLog(plan.runLog ?? []);
+    const stravaForRevise = [stravaSummary, baselineBlock].filter(Boolean).join('\n\n');
+
     const { weeks, coachSummary } = await revisePlanWithAI(
       plan,
-      stravaSummary,
+      stravaForRevise,
       currentWeeks,
       userRequest
     );

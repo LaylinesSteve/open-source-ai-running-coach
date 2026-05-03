@@ -60,7 +60,7 @@ export default async function SyncPage({
         Training log
       </h1>
       <p style={{ color: '#a3a3a3', fontSize: '0.95rem', marginBottom: '2rem' }}>
-        All Strava activities sync here (runs, rides, and more—each row shows the type). Weekly running totals on your plan still count run-like activities only.
+        All Strava activities sync here (runs, rides, and more—each row shows the type). Sessions before plan week 1 are labeled Baseline for fitness context; they are not merged into week 1 on your calendar. Planned-run matching uses activities from plan week 1 onward only.
       </p>
 
       {!hasStrava && (
@@ -98,7 +98,9 @@ export default async function SyncPage({
                   {runLog.map((r, i) => (
                     <tr key={r.stravaId !== 0 ? r.stravaId : `manual-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
                       <td style={{ padding: '0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
-                      <td style={{ padding: '0.75rem' }}>{r.weekNum}</td>
+                      <td style={{ padding: '0.75rem', color: r.weekNum === 0 ? '#737373' : undefined }}>
+                        {r.weekNum === 0 ? 'Baseline' : r.weekNum}
+                      </td>
                       <td style={{ padding: '0.75rem', color: '#e85d04', fontSize: '0.8rem' }}>
                         {r.activityType != null && r.activityType !== ''
                           ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })

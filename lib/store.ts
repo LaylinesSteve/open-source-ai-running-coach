@@ -71,6 +71,7 @@ export interface PlanRecord {
 export interface LoggedRun {
   stravaId: number; // 0 = manually added
   date: string; // YYYY-MM-DD
+  /** 1-based plan week, or 0 = synced activity before plan week 1 (baseline fitness only; not a missed workout). */
   weekNum: number;
   dayLabel: string;
   name: string;

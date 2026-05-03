@@ -91,6 +91,81 @@ export function buildStravaSummary(activities: StravaActivity[]): string {
   return lines.join('\n');
 }
 
+/**
+ * Compact summary of Strava activities strictly before plan week 1 Monday (within the same “recent” window as {@link buildStravaSummary}).
+ * Lets the AI calibrate starting volume without treating baseline as plan adherence.
+ */
+export function buildPrePlanBaselineSummary(activities: StravaActivity[], planWeek1Monday: Date): string {
+  const startMs = new Date(
+    planWeek1Monday.getFullYear(),
+    planWeek1Monday.getMonth(),
+    planWeek1Monday.getDate(),
+    12,
+    0,
+    0,
+    0
+  ).getTime();
+
+  const now = new Date();
+  const sixMonthsAgo = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+
+  const beforePlan = activities.filter((a) => {
+    const actTime = new Date(a.start_date).getTime();
+    if (actTime < sixMonthsAgo.getTime()) return false;
+    const ds = a.start_date.slice(0, 10);
+    return new Date(ds + 'T12:00:00').getTime() < startMs;
+  });
+
+  if (beforePlan.length === 0) return '';
+
+  const runs = beforePlan.filter((a) => countsTowardRunningVolume(a.sport_type || a.type));
+  const lines: string[] = [
+    '=== PRE-PLAN BASELINE (Strava before this plan’s week 1 — use to judge fitness coming into the block and set realistic early-week volume; NOT missed plan workouts) ===',
+    `Activities before plan start (last ~6 mo window): ${beforePlan.length} total.`,
+  ];
+
+  const typeCounts = new Map<string, number>();
+  for (const a of beforePlan) {
+    const t = stravaActivityLabel({ sport_type: a.sport_type, type: a.type });
+    typeCounts.set(t, (typeCounts.get(t) ?? 0) + 1);
+  }
+  lines.push(`By type: ${[...typeCounts.entries()]
+    .sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0]))
+    .map(([t, n]) => `${t}: ${n}`)
+    .join('; ')}.`);
+
+  if (runs.length === 0) {
+    lines.push('No run-like sessions in that baseline window (other sports still inform overall load).');
+    return lines.join('\n');
+  }
+
+  const totalMi = runs.reduce((s, r) => s + (r.distance ?? 0) / 1609.34, 0);
+  const longest = runs.reduce((m, r) => Math.max(m, (r.distance ?? 0) / 1609.34), 0);
+  lines.push(
+    `Run-like baseline: ${runs.length} sessions, ~${totalMi.toFixed(0)} mi total, longest ~${longest.toFixed(1)} mi.`
+  );
+  return lines.join('\n');
+}
+
+/** Text block from synced run log rows with weekNum 0 (for revise / coach context). */
+export function baselineFitnessFromRunLog(runLog: LoggedRun[]): string {
+  const rows = runLog.filter((r) => r.weekNum === 0).sort((a, b) => a.date.localeCompare(b.date));
+  if (rows.length === 0) return '';
+
+  const lines: string[] = [
+    '=== SYNCED PRE-PLAN BASELINE (same Strava history as weekNum 0 in the log — fitness before structured plan weeks; tailor volume/progression; never treat as missed plan runs) ===',
+  ];
+  for (const r of rows) {
+    const timeStr = r.movingTimeSec != null ? `, ${Math.round(r.movingTimeSec / 60)} min` : '';
+    const typeStr =
+      r.activityType != null && r.activityType !== ''
+        ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
+        : 'Run';
+    lines.push(`  ${r.date} [${typeStr}] ${r.name}: ${r.distanceMi} mi${timeStr}`);
+  }
+  return lines.join('\n');
+}
+
 const PLAN_WEEK_JSON_SCHEMA = (n: number, distance: string) => `Each week must be a JSON object with:
 - num: number (1-${n})
 - range: string, e.g. "Mar 7–13" (Monday–Sunday of that week)
@@ -133,6 +208,7 @@ export async function generatePlanWithAI(
 - ${numWeeks} weeks total, ending on race day (week ${numWeeks} = race week). Include an appropriate taper before race day; let the athlete's context and distance guide taper length and structure—do not dictate a fixed taper.
 - Long run progression should fit the race distance: for shorter races (5K, 10K) use lower mileage; for marathon/ultra build to appropriate peak long runs.
 - Each week: typically Tue easy, Thu easy, Sat long run, plus optional short run. Use "day" format like "Tue 3/10" with actual dates so the last Saturday is ${raceDateStr}.
+- If a PRE-PLAN BASELINE section appears in the athlete data, use it to judge fitness coming into the block and to calibrate week 1–2 volume and progression; those sessions are history only—not something they failed to do on this plan.
 - If the athlete's recent volume is low, suggest a softer start and note it in the week's runs or phase.
 - Use the athlete's goal, target time (if any), and any extra context to tailor advice.
 - Also output "coachSummary": a short paragraph (2-4 sentences) summarizing the athlete's recent training and how it informed the plan.
@@ -250,6 +326,8 @@ export async function revisePlanWithAI(
   const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan (week ${numWeeks} must remain race week on ${raceDateStr}). You will be given their context, current plan, their request, and (when available) previous revision requests and what you said in past responses. Maintain continuity: acknowledge prior context where relevant and keep your tone and advice consistent.
 
 Return a revised plan that addresses their request. The athlete may ask for a longer or shorter plan: if lengthening, add weeks at the beginning (extra base/build) while keeping the final week as race week on ${raceDateStr}; if shortening, remove weeks from the early/base portion while preserving an appropriate taper and race week. If they do not ask to change length, keep the same number of weeks (${numWeeks}). Week numbers in the output must run contiguously from 1 through N where week N is race week.
+
+If SYNCED PRE-PLAN BASELINE appears in the training text (activities before structured plan week 1), use it to judge fitness at plan entry when adjusting early volume—it is not missed plan compliance.
 
 Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of week objects, same schema as before; length equals the new plan length) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.${
     isUltraDistance(distance)
@@ -375,6 +453,9 @@ export function buildAdaptationContext(
   const currentWeekNum = Math.max(1, Math.min(totalWeeks, Math.floor(diffDays / 7) + 1));
   const todayLabel = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 
+  const baselineRuns = runLog.filter((r) => r.weekNum === 0);
+  const planWindowRuns = runLog.filter((r) => r.weekNum >= 1);
+
   const lines: string[] = [
     '=== TODAY (use this to avoid treating in-progress weeks as missed) ===',
     `Today is ${todayLabel} (${todayStr}).`,
@@ -386,17 +467,33 @@ export function buildAdaptationContext(
     plan.targetTime ? `Target time: ${plan.targetTime}.` : '',
     plan.additionalInfo ? `Additional context: ${plan.additionalInfo}.` : '',
     '',
+  ];
+
+  if (baselineRuns.length > 0) {
+    lines.push('=== BASELINE FITNESS (synced Strava before plan week 1 — judge sustainable volume and fitness at plan entry only; NOT missed plan workouts) ===');
+    for (const r of baselineRuns) {
+      const timeStr = r.movingTimeSec != null ? `, ${Math.round(r.movingTimeSec / 60)} min` : '';
+      const typeStr =
+        r.activityType != null && r.activityType !== ''
+          ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
+          : 'Run';
+      lines.push(`  ${r.date} [${typeStr}] ${r.name}: ${r.distanceMi} mi${timeStr}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(
     '=== CURRENT PLAN (weekly goals) ===',
     ...weeksData.map((w) => `Week ${w.num} (${w.range}): ${w.miles} — ${w.phase}${w.raceWeek ? ' [RACE WEEK]' : ''}`),
     '',
-    '=== SYNCED ACTIVITIES (run log — all Strava types; weekly comparisons use running volume only) ===',
-  ];
+    '=== SYNCED ACTIVITIES DURING THE PLAN (week 1 onward — compare to weekly targets; all Strava types; running volume for mileage comparisons) ==='
+  );
 
-  if (runLog.length === 0) {
-    lines.push('No activities logged yet.');
+  if (planWindowRuns.length === 0) {
+    lines.push('No activities logged yet in the plan window.');
   } else {
     const byWeek = new Map<number, LoggedRun[]>();
-    for (const r of runLog) {
+    for (const r of planWindowRuns) {
       const list = byWeek.get(r.weekNum) ?? [];
       list.push(r);
       byWeek.set(r.weekNum, list);
@@ -450,8 +547,9 @@ export async function adaptPlanWithAI(
 
 1. Use the "TODAY" section: only consider a week as complete or missed after that week has ended (after Sunday). If today is still within a week, do NOT say they have missed that week's target—they may have several days left to run.
 2. Assess whether they are doing too much (need to ease off and recover), doing about right, or missing too much (need encouragement and practical tips to run a bit more). For the current week in progress, focus on what they've done so far, not on "missing" the weekly total yet.
-3. Adjust the weekly plan and weekly goals: suggest concrete changes to upcoming weeks (e.g. reduce mileage for recovery, or keep/build as planned, or gentle nudge to hit a bit more). Focus on successive weeks from now; consider overall progress toward the race.
-4. Write a short coach's note (2-4 sentences) that:
+3. If "BASELINE FITNESS" appears in context (activities dated before structured plan week 1), use them only to understand fitness and sustainable volume at plan entry—never as evidence they skipped planned workouts on this plan.
+4. Adjust the weekly plan and weekly goals: suggest concrete changes to upcoming weeks (e.g. reduce mileage for recovery, or keep/build as planned, or gentle nudge to hit a bit more). Focus on successive weeks from now; consider overall progress toward the race.
+5. Write a short coach's note (2-4 sentences) that:
    - If they are overdoing it: emphasize recovery, sleep, easy days; suggest backing off the next week(s) and state it clearly.
    - If they are missing too much (only for weeks that have already ended): encourage them without guilt; give 1-2 practical tips to run a bit more.
    - If they're on track or the current week is still in progress: briefly affirm; do not suggest they are behind on the current week.

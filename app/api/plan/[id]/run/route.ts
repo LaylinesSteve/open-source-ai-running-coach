@@ -44,9 +44,6 @@ export async function POST(
   const totalWeeks = plan.weeksData?.length ?? plan.weeks;
   const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
   const weekNum = weekNumberFromPlanStart(dateStr, planStart);
-  if (weekNum < 1) {
-    return NextResponse.json({ error: 'That date is before this plan starts' }, { status: 400 });
-  }
   const entry: LoggedRun = {
     stravaId: 0,
     date: dateStr,

@@ -3,9 +3,12 @@ import { getPlan } from '@/lib/store';
 
 /** Per-plan data must not be statically cached (multiple plans, fresh Strava log). */
 export const dynamic = 'force-dynamic';
+import { clampPlanWeeks, getDefaultWeeksForDistance } from '@/lib/race-distances';
 import { generatePlanWeeks, planWeeksToHtml } from '@/lib/plan-generator';
+import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 import {
   getAccessTokenForPlan,
+  buildPrePlanBaselineSummary,
   buildStravaSummary,
   generatePlanWithAI,
 } from '@/lib/ai-plan';
@@ -66,7 +69,13 @@ export default async function PlanPage({
         const accessToken = await getAccessTokenForPlan(plan);
         if (accessToken) {
           const activities = await fetchStravaActivities(accessToken);
-          const stravaSummary = buildStravaSummary(activities);
+          const numWeeksForBaseline =
+            plan.weeks != null && Number.isFinite(plan.weeks)
+              ? clampPlanWeeks(Math.round(plan.weeks))
+              : getDefaultWeeksForDistance(distance);
+          const planWeek1Monday = getPlanWeek1Monday(plan.raceDate, numWeeksForBaseline);
+          const baselineBlock = buildPrePlanBaselineSummary(activities, planWeek1Monday);
+          const stravaSummary = [buildStravaSummary(activities), baselineBlock].filter(Boolean).join('\n\n');
           stravaSummaryText = stravaSummary;
           const result = await generatePlanWithAI(plan, stravaSummary);
           weeks = result.weeks;

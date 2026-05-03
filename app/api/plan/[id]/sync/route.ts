@@ -48,7 +48,7 @@ function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string;
   return out;
 }
 
-/** Build activity log from Strava, deduped by stravaId. Drops activities before plan week 1 so they are not merged into week 1. */
+/** Build activity log from Strava, deduped by stravaId. Pre-plan activities use weekNum 0 (baseline fitness; not merged into week cards). */
 function buildRunLog(
   activities: {
     id: number;
@@ -78,7 +78,6 @@ function buildRunLog(
     const note = plannedHint ? `Planned: ${plannedHint}` : undefined;
 
     const weekNum = weekNumberFromPlanStart(dateStr, planStart);
-    if (weekNum < 1) continue;
 
     byId.set(a.id, {
       stravaId: a.id,
@@ -96,7 +95,6 @@ function buildRunLog(
 
   return Array.from(byId.values())
     .map((r) => ({ ...r, weekNum: weekNumberFromPlanStart(r.date, planStart) }))
-    .filter((r) => r.weekNum >= 1)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -148,6 +146,7 @@ export async function POST(
   const byDate = new Map<string, number>();
   for (const r of runLog) {
     if (!countsTowardRunningVolume(r.activityType)) continue;
+    if (r.weekNum < 1) continue;
     const cur = byDate.get(r.date) ?? 0;
     byDate.set(r.date, cur + r.distanceMi);
   }

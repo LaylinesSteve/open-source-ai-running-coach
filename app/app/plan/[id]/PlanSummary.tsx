@@ -51,6 +51,8 @@ export default function PlanSummary({
   const textStyle = { color: '#f5f5f5', fontSize: '0.95rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' as const };
   const mutedStyle = { color: '#737373', fontSize: '0.9rem' };
 
+  const showPlanPhase = runLog.some((r) => r.weekNum === 0);
+
   return (
     <div style={{ background: '#0a0a0a' }}>
       <section style={{ ...sectionStyle, paddingTop: '3rem' }}>
@@ -68,7 +70,8 @@ export default function PlanSummary({
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                 <span style={labelStyle}>Recent training</span>
                 <span style={{ ...mutedStyle, fontSize: '0.8rem' }}>
-                  {runLog.length} activit{runLog.length === 1 ? 'y' : 'ies'} (this plan)
+                  {runLog.length} activit{runLog.length === 1 ? 'y' : 'ies'}
+                  {showPlanPhase ? ' — baseline + during plan' : ' — during plan'}
                 </span>
               </div>
               {stravaSummaryText && <p style={{ ...textStyle, marginBottom: '1rem' }}>{stravaSummaryText}</p>}
@@ -77,6 +80,11 @@ export default function PlanSummary({
                   <thead>
                     <tr style={{ borderBottom: '1px solid #262626' }}>
                       <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Date</th>
+                      {showPlanPhase && (
+                        <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>
+                          Plan
+                        </th>
+                      )}
                       <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Type</th>
                       <th style={{ textAlign: 'left', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Name</th>
                       <th style={{ textAlign: 'right', padding: '0.6rem 0.75rem', color: '#737373', fontWeight: 500 }}>Distance</th>
@@ -87,6 +95,11 @@ export default function PlanSummary({
                     {runLog.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 25).map((r, i) => (
                       <tr key={r.stravaId !== 0 ? r.stravaId : `m-${r.date}-${i}`} style={{ borderBottom: '1px solid #262626' }}>
                         <td style={{ padding: '0.6rem 0.75rem', color: '#a3a3a3' }}>{r.dayLabel}</td>
+                        {showPlanPhase && (
+                          <td style={{ padding: '0.6rem 0.75rem', color: '#737373', fontSize: '0.8rem' }}>
+                            {r.weekNum === 0 ? 'Baseline' : `Week ${r.weekNum}`}
+                          </td>
+                        )}
                         <td style={{ padding: '0.6rem 0.75rem', color: '#e85d04', fontSize: '0.8rem' }}>
                           {r.activityType != null && r.activityType !== ''
                             ? stravaActivityLabel({ sport_type: r.activityType, type: r.activityType })
