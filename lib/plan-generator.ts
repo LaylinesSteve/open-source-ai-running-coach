@@ -4,6 +4,7 @@
  */
 
 import { clampPlanWeeks, getDefaultWeeksForDistance } from '@/lib/race-distances';
+import { progressBarData } from '@/lib/plan-progress';
 import { endOfSundayWeek, startOfMondayWeekContaining } from '@/lib/training-week-calendar';
 
 export interface PlanWeek {
@@ -159,28 +160,16 @@ export function planWeeksToHtml(
   const endDate = weeks[numWeeks - 1]?.range?.split('–')[1] || raceDateFormatted;
   const distanceLabel = distance || 'Marathon';
 
-  const maxLongRunMi = Math.max(
-    ...weeks.filter((w) => !w.raceWeek).map((w) => parseInt(w.longRun.replace(/[^\d]/g, ''), 10) || 0),
-    18
-  );
-  const longRunToPct = (lr: string): number => {
-    if (!/^\d+\s*mi$/i.test(lr)) return 100; // race week or non-mile label
-    const n = parseInt(lr.replace(/[^\d]/g, ''), 10);
-    if (Number.isNaN(n)) return 25;
-    return Math.min(64, Math.round((n / maxLongRunMi) * 64)) || 21;
-  };
-
-  const progressBars = weeks.map((w, i) => {
-    const isTaper = w.phase.includes('Taper') && !w.raceWeek;
-    const isRace = w.raceWeek;
-    const pct = isRace ? 100 : longRunToPct(w.longRun);
-    const barClass = isRace ? 'race' : isTaper ? 'taper' : '';
-    const label = w.longRun;
-    const datePart = w.range.split('–')[0];
-    return `<div class="progress-bar-wrap" data-week="${w.num}"><div class="progress-bar ${barClass}" style="height: ${pct}%;"></div><span class="progress-label">${label}</span><span class="progress-date">${datePart}</span></div>`;
-  }).join('\n      ');
-
   const escapeHtml = (s: string) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  const gridCols = Math.min(numWeeks, 52);
+
+  const progressBars = progressBarData(weeks)
+    .map(
+      (d) =>
+        `<div class="progress-bar-wrap" data-week="${d.weekNum}"><div class="progress-bar ${d.barClass}" style="height: ${d.pct}%;"></div><span class="progress-label">${escapeHtml(d.longRun)}</span><span class="progress-date">${escapeHtml(d.datePart)}</span></div>`
+    )
+    .join('\n      ');
   const weekCardsHtml = weeks
     .map((week) => {
       const cardClass = 'week-card' + (week.raceWeek ? ' race-week' : '');
@@ -194,8 +183,6 @@ export function planWeeksToHtml(
       return `<div class="${cardClass}"><details><summary class="week-card-header"><div><div class="week-num">Week ${week.num}</div><div class="week-range">${escapeHtml(week.range)}</div></div><div class="week-meta"><span class="week-miles">${escapeHtml(week.miles)}</span><span class="week-phase">${escapeHtml(week.phase)}</span><span class="week-chevron">▼</span></div></summary><div class="week-body"><div class="week-body-inner"><div class="week-runs">${runsHtml}</div></div></div></details></div>`;
     })
     .join('\n    ');
-
-  const gridCols = Math.min(numWeeks, 52);
 
   return `<!DOCTYPE html>
 <html lang="en">

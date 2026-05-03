@@ -49,6 +49,7 @@ export function mergeWeeksWithRunLog(
   const planStart = getPlanWeek1Monday(raceDate, totalWeeks);
   const runLogByWeek = new Map<number, LoggedRun[]>();
   for (const r of runLog) {
+    if (r.weekNum < 1) continue;
     const list = runLogByWeek.get(r.weekNum) ?? [];
     list.push(r);
     runLogByWeek.set(r.weekNum, list);

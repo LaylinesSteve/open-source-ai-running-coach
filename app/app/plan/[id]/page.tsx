@@ -17,6 +17,7 @@ import PlanTips from './PlanTips';
 import SyncSection from './SyncSection';
 import RevisionForm from './RevisionForm';
 import PlanWeeksPortal from './PlanWeeksPortal';
+import LongRunProgress from './LongRunProgress';
 import WeekGoalCelebration from './WeekGoalCelebration';
 import { mergeWeeksWithRunLog } from '@/lib/merge-runs';
 
@@ -31,6 +32,11 @@ function stripWeeksGridContent(html: string): string {
     /(<div class="weeks-grid" id="weeksGrid">)\s*[\s\S]*?(\s*<\/div>\s*<\/section>\s*<section class="cta-section">)/,
     '$1\n    $2'
   );
+}
+
+/** Drop embedded progress chart so we render it from live weeksData (matches week cards after revise/sync). */
+function stripProgressSectionFromPlanHtml(html: string): string {
+  return html.replace(/<section\b[^>]*\bid=["']progress["'][^>]*>[\s\S]*?<\/section>\s*/i, '');
 }
 
 export default async function PlanPage({
@@ -107,8 +113,11 @@ export default async function PlanPage({
     plan.adaptationNote ||
     (plan.runLog?.length ?? 0) > 0;
   const baseHtml = stripHeroFromPlanHtml(html);
-  const planContentHtml = weeksData ? stripWeeksGridContent(baseHtml) : baseHtml;
-  const weeksRenderedByReact = weeksData && planContentHtml !== baseHtml; // only when strip actually removed content
+  const hasLiveWeeksUi = !!(weeksData && weeksData.length > 0);
+  const planContentHtml = hasLiveWeeksUi
+    ? stripProgressSectionFromPlanHtml(stripWeeksGridContent(baseHtml))
+    : baseHtml;
+  const weeksRenderedByReact = hasLiveWeeksUi;
   const numWeeks = weeksData?.length ?? plan.weeks ?? 12;
   const mergedWeeks = weeksData
     ? mergeWeeksWithRunLog(weeksData, plan.runLog ?? [], plan.raceDate, numWeeks)
@@ -138,6 +147,7 @@ export default async function PlanPage({
           distance={distance}
         />
       )}
+      {hasLiveWeeksUi && weeksData && <LongRunProgress weeks={weeksData} />}
       <PlanView html={planContentHtml} planId={id} hasStrava={!!plan.stravaRefreshToken} />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       {mergedWeeks && mergedWeeks.length > 0 && (

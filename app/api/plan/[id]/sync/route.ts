@@ -4,7 +4,7 @@ import type { LoggedRun } from '@/lib/store';
 import { adaptPlanWithAI, getAccessTokenForPlan } from '@/lib/ai-plan';
 import { countsTowardRunningVolume, fetchStravaActivities } from '@/lib/strava';
 import { generatePlanWeeks, type PlanWeek } from '@/lib/plan-generator';
-import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
+import { getPlanWeek1Monday, weekNumberFromPlanStart } from '@/lib/training-week-calendar';
 
 const SIX_MONTHS_SEC = 180 * 24 * 60 * 60;
 
@@ -28,14 +28,6 @@ function dayLabel(dateStr: string): string {
   return `${days[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-/** Week number (1-based) for a date relative to plan start (Monday week 1). */
-function weekNumForDate(dateStr: string, planStart: Date): number {
-  const d = new Date(dateStr + 'T12:00:00');
-  const diffMs = d.getTime() - planStart.getTime();
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  return Math.max(1, Math.min(999, Math.floor(diffDays / 7) + 1));
-}
-
 /** Build list of planned runs with date (YYYY-MM-DD). Uses week number to infer year from plan start. */
 function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string; weekNum: number; dayLabel: string; planned: string }[] {
   const out: { date: string; weekNum: number; dayLabel: string; planned: string }[] = [];
@@ -56,7 +48,7 @@ function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string;
   return out;
 }
 
-/** Build activity log from Strava (plan window only), deduped by stravaId. All activity types included; type stored on each row. */
+/** Build activity log from Strava, deduped by stravaId. Drops activities before plan week 1 so they are not merged into week 1. */
 function buildRunLog(
   activities: {
     id: number;
@@ -85,10 +77,13 @@ function buildRunLog(
     const plannedHint = plannedByDate.get(dateStr);
     const note = plannedHint ? `Planned: ${plannedHint}` : undefined;
 
+    const weekNum = weekNumberFromPlanStart(dateStr, planStart);
+    if (weekNum < 1) continue;
+
     byId.set(a.id, {
       stravaId: a.id,
       date: dateStr,
-      weekNum: weekNumForDate(dateStr, planStart),
+      weekNum,
       dayLabel: dayLabel(dateStr),
       name: a.name || activityType,
       activityType,
@@ -99,7 +94,10 @@ function buildRunLog(
     });
   }
 
-  return Array.from(byId.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(byId.values())
+    .map((r) => ({ ...r, weekNum: weekNumberFromPlanStart(r.date, planStart) }))
+    .filter((r) => r.weekNum >= 1)
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 export async function POST(

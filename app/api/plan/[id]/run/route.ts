@@ -1,19 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import type { LoggedRun } from '@/lib/store';
-import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
+import { getPlanWeek1Monday, weekNumberFromPlanStart } from '@/lib/training-week-calendar';
 
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
   const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   return `${days[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-function weekNumForDate(dateStr: string, planStart: Date): number {
-  const d = new Date(dateStr + 'T12:00:00');
-  const diffMs = d.getTime() - planStart.getTime();
-  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
-  return Math.max(1, Math.min(999, Math.floor(diffDays / 7) + 1));
 }
 
 export async function POST(
@@ -50,10 +43,14 @@ export async function POST(
 
   const totalWeeks = plan.weeksData?.length ?? plan.weeks;
   const planStart = getPlanWeek1Monday(plan.raceDate, totalWeeks);
+  const weekNum = weekNumberFromPlanStart(dateStr, planStart);
+  if (weekNum < 1) {
+    return NextResponse.json({ error: 'That date is before this plan starts' }, { status: 400 });
+  }
   const entry: LoggedRun = {
     stravaId: 0,
     date: dateStr,
-    weekNum: weekNumForDate(dateStr, planStart),
+    weekNum,
     dayLabel: dayLabel(dateStr),
     name: 'Manual run',
     activityType: 'Run',

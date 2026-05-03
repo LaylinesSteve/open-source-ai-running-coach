@@ -32,3 +32,24 @@ export function getPlanWeek1Monday(raceDateStr: string, totalWeeks: number): Dat
   const week1LongRunDay = addDaysCalendar(race, -7 * (totalWeeks - 1));
   return startOfMondayWeekContaining(week1LongRunDay);
 }
+
+/**
+ * 1-based index of the Monday–Sunday plan week containing `dateStr` (YYYY-MM-DD), relative to plan week 1.
+ * Returns 0 if the activity is strictly before the Monday that starts plan week 1 (should not attach to week 1).
+ */
+export function weekNumberFromPlanStart(dateStr: string, planWeek1Monday: Date): number {
+  const activity = new Date(dateStr + 'T12:00:00');
+  const start = new Date(
+    planWeek1Monday.getFullYear(),
+    planWeek1Monday.getMonth(),
+    planWeek1Monday.getDate(),
+    12,
+    0,
+    0,
+    0
+  );
+  if (activity.getTime() < start.getTime()) return 0;
+  const diffMs = activity.getTime() - start.getTime();
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  return Math.min(999, Math.floor(diffDays / 7) + 1);
+}
