@@ -6,56 +6,65 @@ export function isUltraDistance(distance: string): boolean {
 }
 
 /**
- * Coaching concepts distilled from lower-volume ultramarathon periodization (e.g. progressive
- * hills, cross-training, back-to-backs, time-on-feet). Injected into AI prompts only for 50K+.
+ * Coaching concepts aligned with lower-volume ultramarathon periodization (e.g. SWAP-style plans:
+ * sustainable miles, hills + tempo, cross-training, back-to-back long runs, camp/time-on-feet).
+ * Injected into AI prompts only for 50K+. Not a copy of any single commercial plan—general principles only.
  */
 export function ultraTrainingPromptBlock(distance: string): string {
   if (!isUltraDistance(distance)) return '';
 
   return `
-ULTRAMARATHON (${distance}) — Apply these ideas when shaping weeks, phases, run descriptions, and coachTips (adapt volume to the athlete’s Strava history and week count; this is lower-volume–friendly ultra logic, not a prescriptive copy of any single plan):
+ULTRAMARATHON (${distance}) — Shape weeks using lower-volume ultra logic: durability, climbing, fueling, and time-on-feet over raw mileage. Adapt week count and volume to the athlete’s Strava baseline and goals.
 
-**Volume & structure**
-- Prefer sustainable weekly mileage with emphasis on durability, climbing, and fueling over chasing maximal miles.
-- Periodize toward peak weeks that include longer time-on-feet and (when appropriate) back-to-back moderate weekend runs before the hardest blocks.
-- Include a “camp” or time-on-feet emphasis in the late build (e.g. ~3–5 weeks before race): prioritize easy aerobic volume, heavy fueling practice, mental rehearsal, and resilient downhills—scale longest day to event distance (shorter for 50K, longer for 100M).
+**Weekly rhythm (Monday–Sunday)**
+- Think in full weeks like a trail-ultra calendar: protect recovery around the hardest stimuli (especially before weekend loading).
+- The day before the primary weekly long run should be extra easy—shuffle or slowest comfortable pace is fine; optional non-impact cross-training only if preferred.
+- Before a big mid-week workout (hills + tempo, long hill session, or threshold-style rolling run), keep the prior day lower stress when possible.
 
-**Easy running**
-- Many days should be truly easy or recovery; “shuffle” or slowest comfortable pace is fine when tired.
-- The day before key long runs or hard sessions should stay extra chill.
-- Easy runs: smooth, quick light strides, minimal tension; when feeling great, easy can drift slightly quicker only if it still feels easy and doesn’t compromise recovery.
+**Back-to-back long runs (“weekend sandwich”)**
+- Regularly schedule **back-to-back** weekend runs to practice **running on tired legs**—the Sunday (or second day) should feel like sustained easy aerobic work after Saturday’s longer or more demanding day.
+- Progress thoughtfully: early cycles can use modest Sat + shorter Sun (both mostly easy trail); later build increases time-on-feet or Saturday intensity while Sunday stays controlled easy aerobic.
+- Purpose is adaptation to cumulative fatigue and mental rehearsal for ultra pacing—not two race efforts. Fuel both days; emphasize patience on downhills on the second day.
+- For 50K, keep back-to-backs shorter in total duration than for 50M/100K/100M; scale peak weekend load to event distance.
+
+**Camp / simulation weekend (late build)**
+- Roughly **3–5 weeks before the race**, include a **camp-style** emphasis: a single weekend with **high easy aerobic time-on-feet**, heavy fueling and hydration practice, ultra mindset, and **strong but controlled downhills**.
+- Intensity stays mostly easy; volume is the teacher. Scale the longest day toward race distance (modest for 50K; substantially longer for 100M—optionally with walk/hike allowances).
+- Surrounding days stay extra chill; consider dropping heavy gym legs that week if notes mention strength.
 
 **Long runs & terrain**
-- Long runs are often easy-to-moderate on feel; it’s acceptable to work slightly more on uphills while staying controlled overall.
-- Fueling and hydration practice on long runs is mandatory guidance in notes/coachTips.
-- Trail specificity matters when the race is trail—surface, vert, and descent practice when possible.
-- Downhills are a common limiter: practice strong but controlled descending; on pure easy days, be patient with legs on downs.
+- Long runs are often easy-to-moderate on feel; slightly more work on uphills is OK if globally controlled.
+- Mandate fueling/hydration coaching in notes and coachTips on every substantive long run.
+- Trail and vert specificity when the race is trail; practice descending as a limiter skill.
+- Optional **long hike** layered on weekends or as a second stimulus builds hours on feet with less impact than all-running volume—especially useful for 100K/100M.
 
-**Hills & power (low-impact stimulus)**
-- Use short hill strides (e.g. ~20–45 s) on moderate grades (~6–8%) as VO2/power work with low orthopedic cost; jog-down recovery.
-- Layer longer hill reps (e.g. ~90 s–3 min) at roughly 5K-type effort as “bread-and-butter” strength endurance.
-- Occasionally combine hills with steady moderate running afterward to teach clearing lactate and running well on tired legs.
+**Hills, power, and “tired legs” sessions**
+- Short hill strides (~20–45 s, moderate grade ~6–8%): powerful VO2/neuromuscular stimulus with low pounding; full jog-down recovery.
+- Longer hill reps (~90 s–3 min) at roughly **5K-type effort** are core strength-endurance work.
+- **Combine hills with steady moderate running afterward** so the athlete practices **clearing lactate and maintaining rhythm on tired legs**—a hallmark of quality ultra prep.
+- Occasional **rolling tempo** or moderate steady blocks (~“sustainable hour effort” / marathon-ish rhythm on rolling terrain), including net-uphill options where terrain allows.
 
-**Tempo / steady state**
-- Include some steady moderate-to-hard aerobic pieces on rolling terrain or net uphill, framed as sustainable “~hour effort” or marathon-ish rhythm—not sprinting.
-- Later build can include longer trail tempos that stress the muscular system for race demands.
-
-**Cross-training**
-- Non-impact options (bike, elliptical, uphill treadmill hike) count as real training: aim for aerobic strain without pounding.
-- On cross-training, cadence can mirror running; “hard” segments are controlled resistance/cadence bumps, not all-out sprints.
-- Optional short second sessions (doubles) can be easy cross-training when useful for aerobic volume without impact.
+**Cross-training (real training, not filler)**
+- Bike, elliptical, **uphill treadmill hike/run (“treadmill vert”)**, or ski: aerobic strain with **minimal impact**. Cadence can mirror running; “hard” bits are controlled resistance/cadence, not sprints.
+- Structured XT intervals are fair game (e.g. short repeats like 1 min firm / 1–2 min easy, or pyramids), framed as **aerobic power** without race-level suffering.
+- Optional **easy doubles** (short second session hours apart or adjacent to an easy run) add volume without extra pounding.
 
 **Strength**
-- Reference leg-specific strength for mountains/ultras in notes (e.g. hip/knee stability, downhill resilience)—keep prescriptions general unless the athlete gave equipment/access details.
+- Rotate themes in notes/coachTips: **general strength** for climbing resilience vs **ultra-specific leg durability** (heavy-ish patterns only if appropriate; keep prescriptions general unless the athlete gave equipment access).
+- Heavy strength days often pair better after easier run days or with awareness that legs may feel heavy the next day.
 
-**Hiking / time on feet**
-- For longer ultras especially, optional hikes or run+hike days build specificity for hours on feet with lower risk than all-running volume.
+**Run + hike stacks (longer ultras)**
+- For 100K/100M, occasional **short easy run plus a longer same-day hike** (or very long hike-only day) builds **hours on feet** with limited impact—full fueling as on race day.
+
+**Easy running**
+- Many days truly easy or recovery; smooth relaxed strides, low tension.
+- When the athlete feels great, easy pace can drift slightly quicker only if recovery stays intact.
 
 **Taper & race week**
-- Taper should preserve short neuromuscular sharpness (e.g. brief strides or short hills at modest effort) while leaning into recovery.
+- Preserve brief **neuromuscular sharpness** (short strides or modest hills—not smash sessions) while leaning into recovery.
 - Race-week messaging: start conservative, own fueling, respect downhills, stay positive.
 
 **JSON output**
-- You still output the same "runs" array schema; use "notes" and "coachTip" to describe cross-training, optional hikes, strength themes, doubles, or treadmill hill work when those replace or supplement a run. Label non-run days clearly in dist/notes (e.g. “XT: 60 min bike”, “Optional hike”).
+- Same "runs" array schema. Use dist/notes/coachTip for XT (e.g. “XT: 60–90 min bike, 12×1 min firm / 2 min easy”), optional hikes, treadmill vert, strength themes, doubles, or hill+tempo combos. Label rest or optional days clearly.
 `.trim();
 }

@@ -331,7 +331,7 @@ If SYNCED PRE-PLAN BASELINE appears in the training text (activities before stru
 
 Do not dictate taper; let the plan and their request guide any taper changes. Output ONLY valid JSON with keys "weeks" (array of week objects, same schema as before; length equals the new plan length) and "coachSummary" (string: 2-3 sentences on what you changed and why). No markdown.${
     isUltraDistance(distance)
-      ? ' For 50K and longer ultras, preserve hill power, fueling practice, vert/downhill resilience, cross-training options, and time-on-feet logic when revising.'
+      ? ' For 50K and longer ultras, preserve progressive back-to-back long runs, hill+tempo “tired legs” sessions, cross-training/optional hikes, a late-build camp or time-on-feet weekend, fueling practice, and vert/downhill resilience when revising.'
       : ''
   }`;
 
@@ -560,7 +560,7 @@ Use the exact context provided. Do not invent runs or numbers. Output ONLY a val
 
 ${
     isUltraDistance(distance)
-      ? `For ultramarathon athletes: judge load using time-on-feet, vert, fueling, and recovery—not mileage alone. Encourage cross-training or hiking swaps when reducing impact; respect downhill fatigue as real stress.`
+      ? `For ultramarathon athletes: judge load using time-on-feet, vert, fueling, and recovery—not mileage alone. Respect back-to-back weekend runs as deliberate “tired legs” stimulus, not junk miles. Camp or simulation weekends are easy aerobic volume + fueling practice. Encourage cross-training, hikes, or treadmill vert when reducing impact; treat downhill fatigue as real stress.`
       : ''
   }`;
 
