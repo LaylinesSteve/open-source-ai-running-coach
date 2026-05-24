@@ -24,18 +24,7 @@ export default function CoachChatButton({
         onClick={() => setOpen(true)}
         style={
           isSticky
-            ? {
-                padding: '8px 12px',
-                background: '#0a0a0a',
-                color: '#e85d04',
-                border: '1px solid #e85d04',
-                borderRadius: 8,
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                touchAction: 'manipulation',
-                whiteSpace: 'nowrap',
-              }
+            ? undefined
             : {
                 display: 'inline-block',
                 padding: '12px 20px',
