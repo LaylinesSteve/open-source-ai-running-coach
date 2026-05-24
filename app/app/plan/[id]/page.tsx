@@ -159,7 +159,12 @@ export default async function PlanPage({
       {hasLiveWeeksUi && weeksData && mergedWeeks && (
         <LongRunProgress weeks={weeksData} mergedWeeks={mergedWeeks} raceDate={plan.raceDate} />
       )}
-      <PlanView html={planContentHtml} planId={id} hasStrava={!!plan.stravaRefreshToken} />
+      <PlanView
+        html={planContentHtml}
+        planId={id}
+        hasStrava={!!plan.stravaRefreshToken}
+        coachChatHistory={plan.coachChatHistory}
+      />
       {weeksRenderedByReact && mergedWeeks && mergedWeeks.length > 0 && <PlanWeeksPortal weeks={mergedWeeks} />}
       {mergedWeeks && mergedWeeks.length > 0 && (
         <WeekGoalCelebration
@@ -175,7 +180,6 @@ export default async function PlanPage({
         hasStrava={!!plan.stravaRefreshToken}
         lastSyncAt={plan.lastSyncAt}
         syncResult={plan.syncResult}
-        coachChatHistory={plan.coachChatHistory}
       />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />
     </>

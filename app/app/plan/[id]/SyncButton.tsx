@@ -10,9 +10,12 @@ type AdaptationPayload =
 export default function SyncButton({
   planId,
   variant = 'primary',
+  embedded = false,
 }: {
   planId: string;
   variant?: 'primary' | 'sticky';
+  /** When true with sticky variant, omit fixed positioning (parent bar handles layout). */
+  embedded?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -79,22 +82,25 @@ export default function SyncButton({
   );
 
   if (isSticky) {
-    return (
-      <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }}>
+    const content = (
+      <>
         {button}
         {(error || warn) && (
           <p
+            className="plan-sticky-actions-feedback"
             style={{
-              marginTop: 8,
-              maxWidth: 220,
               color: error ? '#e85d04' : '#a3a3a3',
-              fontSize: '0.75rem',
-              lineHeight: 1.35,
             }}
           >
             {error || warn}
           </p>
         )}
+      </>
+    );
+    if (embedded) return <div className="plan-sticky-actions-item">{content}</div>;
+    return (
+      <div style={{ position: 'fixed', top: 16, right: 16, zIndex: 10 }}>
+        {content}
       </div>
     );
   }
