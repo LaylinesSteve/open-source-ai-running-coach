@@ -66,6 +66,14 @@ export interface PlanRecord {
   adaptationSuggestedWeeks?: { weekNum: number; suggestedMiles?: string; note?: string }[];
   /** Week numbers (1-based) that have already shown the goal-celebration. */
   celebratedWeekNumbers?: number[];
+  /** Coach chat thread (progress & training plan Q&A). */
+  coachChatHistory?: CoachChatMessage[];
+}
+
+export interface CoachChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  at: string;
 }
 
 export interface LoggedRun {

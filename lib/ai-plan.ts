@@ -617,3 +617,90 @@ Provide your assessment and coach note. Return JSON: { "coachNote": "...", "sugg
 
   return { coachNote, suggestedWeeks };
 }
+
+const MAX_CHAT_HISTORY_STORED = 40;
+
+/** Conversational coach chat about progress and the training plan. */
+export async function chatWithCoach(
+  plan: PlanRecord,
+  weeksData: PlanWeek[],
+  runLog: LoggedRun[],
+  priorMessages: { role: 'user' | 'assistant'; content: string }[],
+  userMessage: string
+): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+  const context = buildAdaptationContext(plan, weeksData, runLog);
+  const distance = plan.distance || 'Marathon';
+  const athleteName = [plan.firstName, plan.lastName].filter(Boolean).join(' ') || 'athlete';
+
+  const upcomingWeeks = weeksData
+    .filter((w) => !w.raceWeek)
+    .slice(0, 8)
+    .map((w) => {
+      const runLines = w.runs
+        .map((r) => `    ${r.day}: ${r.dist}${r.notes ? ` — ${r.notes}` : ''}`)
+        .join('\n');
+      return `Week ${w.num} (${w.range}, ${w.miles}, ${w.phase}):\n${runLines}`;
+    })
+    .join('\n\n');
+
+  const systemInstruction = `You are an expert running coach helping ${athleteName} prepare for ${plan.raceName} (${distance}, race ${plan.raceDate}).
+
+Answer questions about their training plan, logged activities, progress, recovery, pacing, and race prep. Be concise, practical, and encouraging—usually 2–5 short paragraphs unless they ask for detail.
+
+Rules:
+- Use ONLY facts from the context below. Do not invent runs, mileage, or plan details.
+- If multiple activities occurred on the same day, count all of them toward that day's volume.
+- Weeks still in progress are not "missed" until the week has ended (Monday–Sunday).
+- Baseline Strava activities before plan week 1 are fitness context, not missed workouts.
+- You cannot change the stored plan in chat; suggest they use "Revise plan" or sync Strava for updates.
+
+${isUltraDistance(distance) ? 'Ultramarathon: emphasize time-on-feet, vert, fueling, back-to-back weekends, and recovery—not mileage alone.' : ''}
+
+=== ATHLETE CONTEXT ===
+${context}
+
+=== UPCOMING PLAN DETAIL (sample) ===
+${upcomingWeeks || '(no structured weeks)'}
+
+${plan.coachSummary ? `Initial coach summary: ${plan.coachSummary}` : ''}
+${plan.adaptationNote ? `Latest adaptation note (${plan.adaptationAt ?? 'recent'}): ${plan.adaptationNote}` : ''}`;
+
+  const contents: { role: string; parts: { text: string }[] }[] = [];
+  for (const m of priorMessages.slice(-20)) {
+    contents.push({
+      role: m.role === 'user' ? 'user' : 'model',
+      parts: [{ text: m.content }],
+    });
+  }
+  contents.push({ role: 'user', parts: [{ text: userMessage.trim() }] });
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
+        generationConfig: {
+          temperature: 0.55,
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Gemini API error: ${err}`);
+  }
+
+  const data = await res.json();
+  const reply = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!reply) throw new Error('Empty response from coach');
+  return reply;
+}
+
+export { MAX_CHAT_HISTORY_STORED };

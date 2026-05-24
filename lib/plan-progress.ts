@@ -2,7 +2,7 @@
 
 import type { PlanWeek } from '@/lib/plan-generator';
 import type { MergedWeek } from '@/lib/merge-runs';
-import { countsTowardRunningVolume } from '@/lib/strava';
+import { sumMergedRunRunningMi } from '@/lib/merge-runs';
 import { addDaysCalendar, getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
 export interface ProgressWeekInput {
@@ -103,9 +103,7 @@ export function longRunMilesForChart(longRun: string): number | null {
 function sumActualRunningMi(merged: MergedWeek): number {
   let s = 0;
   for (const r of merged.runs) {
-    if (r.actual != null && countsTowardRunningVolume(r.actual.activityType)) {
-      s += r.actual.distanceMi;
-    }
+    s += sumMergedRunRunningMi(r);
   }
   return s;
 }

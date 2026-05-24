@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { MergedWeek } from '@/lib/merge-runs';
-import { countsTowardRunningVolume, stravaActivityLabel } from '@/lib/strava';
+import type { MergedActual, MergedRun, MergedWeek } from '@/lib/merge-runs';
+import { sumMergedRunRunningMi } from '@/lib/merge-runs';
+import { stravaActivityLabel } from '@/lib/strava';
 
 function formatDuration(sec?: number): string {
   if (sec == null) return '';
@@ -13,17 +14,78 @@ function formatDuration(sec?: number): string {
   return `${m} min`;
 }
 
+function formatActualNotes(actual: MergedActual): string {
+  const typeHint =
+    actual.activityType != null && actual.activityType !== ''
+      ? stravaActivityLabel({ sport_type: actual.activityType, type: actual.activityType })
+      : null;
+  return [
+    typeHint ? `[${typeHint}]` : null,
+    actual.name,
+    formatDuration(actual.movingTimeSec),
+    actual.perceivedIntensity != null ? `RPE ${actual.perceivedIntensity}` : null,
+    actual.note,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+type DisplayRow = {
+  key: string;
+  dayLabel: string;
+  dist: string;
+  notes: string;
+  coachTip?: string;
+  isLong: boolean;
+};
+
+function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
+  const actuals = run.actuals ?? [];
+  const plannedDist = run.planned?.dist?.trim() ?? '';
+  const isRestPlanned = /rest|optional|\+ ?1 optional/i.test(plannedDist);
+  const plannedHint =
+    run.planned && plannedDist && !isRestPlanned ? `Planned: ${plannedDist}` : null;
+
+  if (actuals.length === 0) {
+    return [
+      {
+        key: `${run.dateStr}-planned-${rowIndex}`,
+        dayLabel: run.dayLabel,
+        dist: plannedDist,
+        notes: run.planned?.notes ?? '',
+        coachTip: run.planned?.coachTip?.trim(),
+        isLong: run.planned?.long ?? false,
+      },
+    ];
+  }
+
+  return actuals.map((actual, i) => {
+    const dist =
+      actual.distanceMi > 0 ? `${actual.distanceMi} mi` : run.planned?.dist ?? '—';
+    const notesParts = [formatActualNotes(actual)];
+    if (i === 0 && plannedHint) notesParts.unshift(plannedHint);
+    return {
+      key: `${run.dateStr}-actual-${i}-${rowIndex}`,
+      dayLabel: i === 0 ? run.dayLabel : '↳',
+      dist,
+      notes: notesParts.filter(Boolean).join(' · '),
+      coachTip: i === 0 ? run.planned?.coachTip?.trim() : undefined,
+      isLong: (run.planned?.long ?? false) && i === 0,
+    };
+  });
+}
+
 function WeekCard({ week }: { week: MergedWeek }) {
   const cardClass = 'week-card' + (week.raceWeek ? ' race-week' : '');
-  const completedMi = week.runs
-    .filter((r) => r.actual != null && countsTowardRunningVolume(r.actual.activityType))
-    .reduce((sum, r) => sum + r.actual!.distanceMi, 0);
+  const completedMi = week.runs.reduce((sum, r) => sum + sumMergedRunRunningMi(r), 0);
   const plannedNum = parseInt(week.miles.replace(/[^\d]/g, ''), 10) || 0;
   const milesLabel =
     plannedNum > 0
       ? `${Math.round(completedMi * 10) / 10} of ${plannedNum} mi`
       : week.miles;
   const milesComplete = plannedNum > 0 && completedMi >= plannedNum;
+
+  const displayRows = week.runs.flatMap((r, i) => buildDisplayRows(r, i));
 
   return (
     <div className={cardClass}>
@@ -47,42 +109,16 @@ function WeekCard({ week }: { week: MergedWeek }) {
         <div className="week-body">
           <div className="week-body-inner">
             <div className="week-runs">
-              {week.runs.map((r, i) => {
-                const isLong = r.planned?.long ?? false;
-                const dist =
-                  r.actual != null
-                    ? r.actual.distanceMi > 0
-                      ? `${r.actual.distanceMi} mi`
-                      : '—'
-                    : r.planned?.dist ?? '';
-                const typeHint =
-                  r.actual?.activityType != null && r.actual.activityType !== ''
-                    ? stravaActivityLabel({ sport_type: r.actual.activityType, type: r.actual.activityType })
-                    : null;
-                const notes =
-                  r.actual != null
-                    ? [
-                        typeHint ? `[${typeHint}]` : null,
-                        r.actual.name,
-                        formatDuration(r.actual.movingTimeSec),
-                        r.actual.perceivedIntensity != null ? `RPE ${r.actual.perceivedIntensity}` : null,
-                        r.actual.note,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    : (r.planned?.notes ?? '');
-                const coachTip = r.planned?.coachTip?.trim();
-                return (
-                  <div key={i} className={'run-row' + (isLong ? ' long' : '')}>
-                    <div className="run-row-top">
-                      <span className="run-day">{r.dayLabel}</span>
-                      <span className="run-dist">{dist}</span>
-                      <span className="run-notes">{notes}</span>
-                    </div>
-                    {coachTip ? <div className="run-coach-tip">{coachTip}</div> : null}
+              {displayRows.map((row) => (
+                <div key={row.key} className={'run-row' + (row.isLong ? ' long' : '')}>
+                  <div className="run-row-top">
+                    <span className="run-day">{row.dayLabel}</span>
+                    <span className="run-dist">{row.dist}</span>
+                    <span className="run-notes">{row.notes}</span>
                   </div>
-                );
-              })}
+                  {row.coachTip ? <div className="run-coach-tip">{row.coachTip}</div> : null}
+                </div>
+              ))}
             </div>
           </div>
         </div>

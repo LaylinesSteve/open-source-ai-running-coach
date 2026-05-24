@@ -3,8 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { MergedWeek } from '@/lib/merge-runs';
+import { sumMergedRunRunningMi } from '@/lib/merge-runs';
 import { weeklyGoalMinMiles } from '@/lib/plan-progress';
-import { countsTowardRunningVolume } from '@/lib/strava';
 import Confetti from './Confetti';
 
 const CELEBRATION_MESSAGES = [
@@ -33,9 +33,7 @@ const CELEBRATION_MESSAGES = [
 function getCompletedWeekNumbers(weeks: MergedWeek[]): number[] {
   const out: number[] = [];
   for (const week of weeks) {
-    const completedMi = week.runs
-      .filter((r) => r.actual != null && countsTowardRunningVolume(r.actual.activityType))
-      .reduce((sum, r) => sum + r.actual!.distanceMi, 0);
+    const completedMi = week.runs.reduce((sum, r) => sum + sumMergedRunRunningMi(r), 0);
     const plannedMin = weeklyGoalMinMiles(week.miles);
     if (plannedMin > 0 && completedMi >= plannedMin) {
       out.push(week.num);

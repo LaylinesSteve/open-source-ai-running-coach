@@ -3,23 +3,34 @@ import type { LoggedRun } from '@/lib/store';
 import { countsTowardRunningVolume } from '@/lib/strava';
 import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
 
+export interface MergedActual {
+  name: string;
+  activityType?: string;
+  distanceMi: number;
+  movingTimeSec?: number;
+  elevationFt?: number;
+  perceivedIntensity?: number;
+  note?: string;
+}
+
 export interface MergedRun {
   dateStr: string;
   dayLabel: string;
   planned?: { dist: string; notes: string; long?: boolean; coachTip?: string };
-  actual?: {
-    name: string;
-    activityType?: string;
-    distanceMi: number;
-    movingTimeSec?: number;
-    elevationFt?: number;
-    perceivedIntensity?: number;
-    note?: string;
-  };
+  /** All logged activities on this date (Strava + manual). */
+  actuals?: MergedActual[];
 }
 
 export interface MergedWeek extends Omit<PlanWeek, 'runs'> {
   runs: MergedRun[];
+}
+
+/** Sum running volume for a merged day row (all activities that count toward mileage). */
+export function sumMergedRunRunningMi(run: MergedRun): number {
+  if (!run.actuals?.length) return 0;
+  return run.actuals
+    .filter((a) => countsTowardRunningVolume(a.activityType))
+    .reduce((sum, a) => sum + a.distanceMi, 0);
 }
 
 /** Parse "Tue 3/17" to { month, day }. */
@@ -32,11 +43,16 @@ function parseRunDay(dayStr: string): { month: number; day: number } | null {
   return { month, day };
 }
 
-/** Format date as "Tue 3/17". */
-function dayLabel(dateStr: string): string {
-  const d = new Date(dateStr + 'T12:00:00');
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  return `${days[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+function loggedRunToMergedActual(r: LoggedRun): MergedActual {
+  return {
+    name: r.name,
+    activityType: r.activityType,
+    distanceMi: r.distanceMi,
+    movingTimeSec: r.movingTimeSec,
+    elevationFt: r.elevationFt,
+    perceivedIntensity: r.perceivedIntensity,
+    note: r.note,
+  };
 }
 
 /** Merge plan weeks with run log: actual runs replace or sit alongside planned as we move through time. */
@@ -78,33 +94,33 @@ export function mergeWeeksWithRunLog(
       });
     }
 
-    // Actual runs: fill in or add row
+    // Actual runs: group by date so multiple sessions on one day are all shown
     const actuals = runLogByWeek.get(week.num) ?? [];
+    const actualsByDate = new Map<string, LoggedRun[]>();
     for (const r of actuals) {
-      const existing = rowByDate.get(r.date);
+      const list = actualsByDate.get(r.date) ?? [];
+      list.push(r);
+      actualsByDate.set(r.date, list);
+    }
+
+    for (const [date, runs] of actualsByDate) {
+      const mergedActuals = runs
+        .slice()
+        .sort((a, b) => {
+          const ta = a.movingTimeSec ?? 0;
+          const tb = b.movingTimeSec ?? 0;
+          return a.stravaId - b.stravaId || ta - tb;
+        })
+        .map(loggedRunToMergedActual);
+
+      const existing = rowByDate.get(date);
       if (existing) {
-        existing.actual = {
-          name: r.name,
-          activityType: r.activityType,
-          distanceMi: r.distanceMi,
-          movingTimeSec: r.movingTimeSec,
-          elevationFt: r.elevationFt,
-          perceivedIntensity: r.perceivedIntensity,
-          note: r.note,
-        };
+        existing.actuals = mergedActuals;
       } else {
-        rowByDate.set(r.date, {
-          dateStr: r.date,
-          dayLabel: r.dayLabel,
-          actual: {
-            name: r.name,
-            activityType: r.activityType,
-            distanceMi: r.distanceMi,
-            movingTimeSec: r.movingTimeSec,
-            elevationFt: r.elevationFt,
-            perceivedIntensity: r.perceivedIntensity,
-            note: r.note,
-          },
+        rowByDate.set(date, {
+          dateStr: date,
+          dayLabel: runs[0].dayLabel,
+          actuals: mergedActuals,
         });
       }
     }

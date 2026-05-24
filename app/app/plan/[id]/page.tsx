@@ -169,7 +169,14 @@ export default async function PlanPage({
         />
       )}
       <PlanTips tips={tips} distance={distance} />
-      <SyncSection planId={id} hasWeeksData={!!weeksData} hasStrava={!!plan.stravaRefreshToken} lastSyncAt={plan.lastSyncAt} syncResult={plan.syncResult} />
+      <SyncSection
+        planId={id}
+        hasWeeksData={!!weeksData}
+        hasStrava={!!plan.stravaRefreshToken}
+        lastSyncAt={plan.lastSyncAt}
+        syncResult={plan.syncResult}
+        coachChatHistory={plan.coachChatHistory}
+      />
       <RevisionForm planId={id} hasWeeksData={!!weeksData} />
     </>
   );
