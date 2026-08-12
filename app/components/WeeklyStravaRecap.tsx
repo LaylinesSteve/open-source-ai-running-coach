@@ -171,8 +171,8 @@ export default function WeeklyStravaRecap({
 }: WeeklyStravaRecapProps) {
   const [unit, setUnit] = useState<'km' | 'mi'>('mi');
   const [hover, setHover] = useState<number | null>(null);
-  const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [weekIndex, setWeekIndex] = useState(() => Math.max(0, weeks.length - 1));
   const [glassInk, setGlassInk] = useState<'dark' | 'light'>('dark');
   const cardRef = useRef<HTMLElement>(null);
@@ -271,65 +271,134 @@ export default function WeeklyStravaRecap({
   const up = deltaPct >= 0;
   const runsOnly = WEEK.filter((r) => r.dist > 0);
 
-  const copy = () => {
-    navigator.clipboard
-      ?.writeText(typeof window !== 'undefined' ? window.location.href : '')
-      .catch(() => {})
-      .finally(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1800);
-      });
+  const solidFallback: Record<SkinId, string> = {
+    blaze: '#08090b',
+    confetti: '#fbe9f7',
+    chromepop: '#0a0a0c',
+    psychedelic: '#120018',
+    glamor: '#e8e2d4',
+    luxury: '#0a0a08',
+    americana: '#ded4bf',
+    mtv: '#12061f',
+    nps: '#0d1a0d',
+    glass: glassInk === 'light' ? '#1a1a1a' : '#ebebeb',
+  };
+
+  /** Capture the card and composite onto a 1080×1920 Instagram Story canvas. */
+  const buildStoryPngBlob = async (): Promise<Blob> => {
+    if (!cardRef.current) throw new Error('Recap card not ready');
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
+    }
+
+    const dataUrl = await toPng(cardRef.current, {
+      cacheBust: true,
+      pixelRatio: Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2),
+      backgroundColor: solidFallback[previewSkinId],
+      style: {
+        ...skin.vars,
+        ...(previewSkinId === 'glass' && glassInk === 'light' ? GLASS_WHITE : {}),
+      },
+    });
+
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Failed to load recap image'));
+      el.src = dataUrl;
+    });
+
+    // Instagram Stories native size
+    const STORY_W = 1080;
+    const STORY_H = 1920;
+    const canvas = document.createElement('canvas');
+    canvas.width = STORY_W;
+    canvas.height = STORY_H;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Could not create canvas');
+
+    ctx.fillStyle = solidFallback[previewSkinId];
+    ctx.fillRect(0, 0, STORY_W, STORY_H);
+
+    // Keep content in the Stories safe zone (away from top/bottom system UI).
+    const padX = 64;
+    const padY = 160;
+    const maxW = STORY_W - padX * 2;
+    const maxH = STORY_H - padY * 2;
+    const scale = Math.min(maxW / img.width, maxH / img.height);
+    const dw = img.width * scale;
+    const dh = img.height * scale;
+    const dx = (STORY_W - dw) / 2;
+    const dy = (STORY_H - dh) / 2;
+    ctx.drawImage(img, dx, dy, dw, dh);
+
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('Could not encode story image');
+    return blob;
+  };
+
+  const saveBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const download = async () => {
-    if (!cardRef.current || downloading) return;
+    if (!cardRef.current || downloading || sharing) return;
     setDownloading(true);
     setThemeMessage(null);
     try {
-      // Ensure webfonts used on the card are ready before rasterizing.
-      if (document.fonts?.ready) {
-        await document.fonts.ready;
-      }
-
-      const solidFallback: Record<SkinId, string> = {
-        blaze: '#08090b',
-        confetti: '#fbe9f7',
-        chromepop: '#0a0a0c',
-        psychedelic: '#120018',
-        glamor: '#e8e2d4',
-        luxury: '#0a0a08',
-        americana: '#ded4bf',
-        mtv: '#12061f',
-        nps: '#0d1a0d',
-        glass: glassInk === 'light' ? '#1a1a1a' : '#ebebeb',
-      };
-
-      const dataUrl = await toPng(cardRef.current, {
-        cacheBust: true,
-        pixelRatio: Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2),
-        backgroundColor: solidFallback[previewSkinId],
-        style: {
-          // Re-apply skin tokens on the capture root (vars live on an ancestor in the live DOM).
-          ...skin.vars,
-          ...(previewSkinId === 'glass' && glassInk === 'light' ? GLASS_WHITE : {}),
-        },
-      });
-
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `weekly-recap-${previewSkinId}.png`;
-      link.href = url;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
+      const blob = await buildStoryPngBlob();
+      saveBlob(blob, `weekly-recap-story-${previewSkinId}.png`);
     } catch (err) {
       console.error('Weekly recap download failed', err);
       setThemeMessage('Could not download image. Try again in a moment.');
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const shareToInstagram = async () => {
+    if (!cardRef.current || sharing || downloading) return;
+    setSharing(true);
+    setThemeMessage(null);
+    try {
+      const blob = await buildStoryPngBlob();
+      const file = new File([blob], `weekly-recap-story-${previewSkinId}.png`, { type: 'image/png' });
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+      // Best path: system share sheet (Instagram appears on phones).
+      if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Weekly running recap',
+          text: 'My weekly Strava recap',
+        });
+        return;
+      }
+
+      // Fallback: save the story image, then open Instagram.
+      saveBlob(blob, file.name);
+      if (isMobile) {
+        // Opens the Stories camera when the IG app is installed.
+        window.location.href = 'instagram://story-camera';
+        setThemeMessage('Image saved — choose it in Instagram Stories.');
+      } else {
+        window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
+        setThemeMessage('Story image saved — open Instagram on your phone to post it.');
+      }
+    } catch (err) {
+      const name = err instanceof Error ? err.name : '';
+      if (name === 'AbortError') return; // user dismissed share sheet
+      console.error('Weekly recap Instagram share failed', err);
+      setThemeMessage('Could not share to Instagram. Try Download image instead.');
+    } finally {
+      setSharing(false);
     }
   };
 
@@ -444,7 +513,7 @@ export default function WeeklyStravaRecap({
         style={{
           position: 'relative',
           zIndex: 1,
-          maxWidth: 520,
+          maxWidth: 420,
           margin: '0 auto',
           animation: 'weeklyFadeUp 0.55s ease',
         }}
@@ -704,6 +773,12 @@ export default function WeeklyStravaRecap({
             ...(previewSkinId === 'glass' && glassInk === 'light' ? (GLASS_WHITE as CSSProperties) : {}),
             position: 'relative',
             width: '100%',
+            maxWidth: 360,
+            margin: '0 auto',
+            // Instagram Story frame (9:16)
+            aspectRatio: '9 / 16',
+            display: 'flex',
+            flexDirection: 'column',
             overflow: 'hidden',
             borderRadius: 'var(--radius)',
             background: 'var(--card)',
@@ -712,10 +787,21 @@ export default function WeeklyStravaRecap({
             color: 'var(--ink)',
           }}
         >
-          <div style={{ height: 3, width: '100%', background: 'var(--strip)' }} />
+          <div style={{ height: 3, width: '100%', flexShrink: 0, background: 'var(--strip)' }} />
           <WeeklySkinDeco skinId={previewSkinId} />
 
-          <div style={{ position: 'relative', padding: '24px 28px 28px' }}>
+          <div
+            style={{
+              position: 'relative',
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '22px 22px 20px',
+              boxSizing: 'border-box',
+            }}
+          >
             <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div
@@ -837,7 +923,7 @@ export default function WeeklyStravaRecap({
               </span>
             </header>
 
-            <div style={{ marginTop: 28 }}>
+            <div style={{ marginTop: 'clamp(18px, 3.5vh, 28px)' }}>
               <p
                 style={{
                   margin: 0,
@@ -857,7 +943,7 @@ export default function WeeklyStravaRecap({
                     lineHeight: 0.85,
                     letterSpacing: '-0.03em',
                     fontVariantNumeric: 'tabular-nums',
-                    fontSize: 'clamp(52px, 14vw, 82px)',
+                    fontSize: 'clamp(48px, 14vw, 72px)',
                     color: 'var(--ink)',
                     fontFamily: 'var(--font-display)',
                   }}
@@ -896,7 +982,7 @@ export default function WeeklyStravaRecap({
               </div>
             </div>
 
-            <section style={{ marginTop: 28 }}>
+            <section style={{ marginTop: 'clamp(16px, 2.8vh, 24px)', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
               <div
                 style={{
                   marginBottom: 12,
@@ -942,7 +1028,9 @@ export default function WeeklyStravaRecap({
               <div
                 style={{
                   display: 'flex',
-                  height: 168,
+                  flex: 1,
+                  minHeight: 170,
+                  maxHeight: 260,
                   alignItems: 'flex-end',
                   gap: 8,
                   borderBottom: '1px solid var(--grid)',
@@ -950,7 +1038,7 @@ export default function WeeklyStravaRecap({
               >
                 {WEEK.map((r, i) => {
                   const active = hover === i;
-                  const h = r.dist > 0 ? Math.max(6, (r.dist / maxDist) * 150) : 0;
+                  const h = r.dist > 0 ? Math.max(6, (r.dist / maxDist) * 100) : 0;
                   const useActiveBar = swapBars ? !active : active;
                   return (
                     <button
@@ -990,7 +1078,8 @@ export default function WeeklyStravaRecap({
                         <div
                           style={{
                             width: '100%',
-                            height: h,
+                            height: `${h}%`,
+                            maxHeight: '100%',
                             background: useActiveBar ? 'var(--bar-active)' : 'var(--bar)',
                             boxShadow: active ? '0 0 18px var(--bar-glow)' : 'none',
                             borderTopLeftRadius: sharp ? 0 : 5,
@@ -1036,13 +1125,14 @@ export default function WeeklyStravaRecap({
 
             <section
               style={{
-                marginTop: 24,
+                marginTop: 'clamp(14px, 2.4vh, 22px)',
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 overflow: 'hidden',
                 border: '1px solid var(--border)',
                 background: 'var(--tile)',
                 borderRadius: sharp ? 0 : 16,
+                flexShrink: 0,
               }}
             >
               {stats.map((s, i) => (
@@ -1084,7 +1174,7 @@ export default function WeeklyStravaRecap({
               ))}
             </section>
 
-            <section style={{ marginTop: 24 }}>
+            <section style={{ marginTop: 'clamp(14px, 2.4vh, 22px)', flexShrink: 0 }}>
               <p
                 style={{
                   margin: '0 0 8px',
@@ -1102,8 +1192,8 @@ export default function WeeklyStravaRecap({
 
             <p
               style={{
-                margin: '24px 0 0',
-                paddingTop: 20,
+                margin: '16px 0 0',
+                paddingTop: 14,
                 borderTop: '1px solid var(--border)',
                 textAlign: 'center',
                 fontSize: 10,
@@ -1111,6 +1201,7 @@ export default function WeeklyStravaRecap({
                 letterSpacing: '0.22em',
                 fontFamily: 'var(--font-mono)',
                 color: 'var(--muted)',
+                flexShrink: 0,
               }}
             >
               {connected
@@ -1240,7 +1331,8 @@ export default function WeeklyStravaRecap({
 
             <button
               type="button"
-              onClick={copy}
+              onClick={shareToInstagram}
+              disabled={sharing || downloading}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1249,15 +1341,16 @@ export default function WeeklyStravaRecap({
                 fontSize: 13,
                 fontWeight: 700,
                 border: 'none',
-                cursor: 'pointer',
+                cursor: sharing || downloading ? 'wait' : 'pointer',
                 background: 'var(--btn)',
                 color: 'var(--btn-fg)',
                 filter: 'drop-shadow(0 5px 10px var(--btn-shadow))',
                 fontFamily: 'var(--font-display)',
+                opacity: sharing ? 0.7 : 1,
                 ...ctl(0),
               }}
             >
-              {copied ? 'Link copied ✓' : 'Share recap'}
+              {sharing ? 'Opening Instagram…' : 'Share to Instagram'}
             </button>
           </div>
         </div>
