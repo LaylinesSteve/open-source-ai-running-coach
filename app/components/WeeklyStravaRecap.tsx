@@ -1284,6 +1284,22 @@ export default function WeeklyStravaRecap({
             </button>
           </div>
 
+          {previewSkinId === 'glass' && (
+            <p
+              style={{
+                margin: 0,
+                maxWidth: 280,
+                textAlign: 'center',
+                fontSize: 12,
+                lineHeight: 1.4,
+                color: 'var(--muted)',
+                fontFamily: 'var(--font-body)',
+              }}
+            >
+              For transparent image add the saved image to IG as a sticker
+            </p>
+          )}
+
           <div
             style={{
               display: 'flex',
