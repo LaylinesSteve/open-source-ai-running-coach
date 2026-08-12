@@ -303,10 +303,17 @@ export default function WeeklyStravaRecap({
     }
   };
 
+  const elevDisplay =
+    unit === 'mi' ? Math.round(totals.elev * 3.28084) : Math.round(totals.elev);
+
   const stats = [
     { label: 'Moving time', value: clock(totals.time), sub: `across ${totals.runs} runs` },
     { label: 'Avg pace', value: paceStr(avgPaceSec), sub: `min / ${unit}` },
-    { label: 'Elevation', value: Math.round(totals.elev).toLocaleString(), sub: 'm gained' },
+    {
+      label: 'Elevation',
+      value: elevDisplay.toLocaleString(),
+      sub: unit === 'mi' ? 'ft gained' : 'm gained',
+    },
     {
       label: 'Longest',
       value: conv(maxDist === 0.0001 ? 0 : Math.max(...WEEK.map((r) => r.dist))).toFixed(1),
