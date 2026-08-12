@@ -15,10 +15,22 @@ export function getStravaAuthUrl(state: string, redirectUri: string): string {
   return `${STRAVA_OAUTH}/authorize?${params.toString()}`;
 }
 
+export interface StravaAthleteProfile {
+  id: number;
+  firstname?: string;
+  lastname?: string;
+  username?: string;
+}
+
 export async function exchangeStravaCode(
   code: string,
   redirectUri: string
-): Promise<{ access_token: string; refresh_token: string; expires_at: number }> {
+): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  athlete?: StravaAthleteProfile;
+}> {
   const clientId = process.env.STRAVA_CLIENT_ID;
   const clientSecret = process.env.STRAVA_CLIENT_SECRET;
   if (!clientId || !clientSecret) throw new Error('Strava credentials not configured');
@@ -41,10 +53,19 @@ export async function exchangeStravaCode(
   }
 
   const data = await res.json();
+  const athlete = data.athlete
+    ? {
+        id: data.athlete.id as number,
+        firstname: data.athlete.firstname as string | undefined,
+        lastname: data.athlete.lastname as string | undefined,
+        username: data.athlete.username as string | undefined,
+      }
+    : undefined;
   return {
     access_token: data.access_token,
     refresh_token: data.refresh_token,
     expires_at: data.expires_at,
+    athlete,
   };
 }
 

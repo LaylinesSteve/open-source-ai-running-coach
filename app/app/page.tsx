@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import LandingWeeklySection from '@/app/components/LandingWeeklySection';
 
 const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left right left right B A
 
@@ -308,6 +309,14 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        {/* Weekly Strava summary */}
+        <div
+          ref={(el) => { sectionRefs.current.weekly = el; }}
+          data-section="weekly"
+        >
+          <LandingWeeklySection visible={!!visible.weekly} />
+        </div>
 
         {/* Benefits */}
         <section
