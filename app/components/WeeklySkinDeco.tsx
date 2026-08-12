@@ -75,9 +75,8 @@ export default function WeeklySkinDeco({ skinId }: { skinId: SkinId }) {
       <div aria-hidden style={{ pointerEvents: 'none', position: 'absolute', inset: 0, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1697465379722-98040bb9c509?w=1400&q=80&auto=format&fit=crop"
+          src="/weekly/mtv.jpg"
           alt=""
-          crossOrigin="anonymous"
           style={{
             position: 'absolute',
             inset: 0,
@@ -221,9 +220,8 @@ export default function WeeklySkinDeco({ skinId }: { skinId: SkinId }) {
       <div aria-hidden style={{ pointerEvents: 'none', position: 'absolute', inset: 0, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1780846065832-82c924a90bb1?w=1400&q=80&auto=format&fit=crop"
+          src="/weekly/americana.jpg"
           alt=""
-          crossOrigin="anonymous"
           style={{
             position: 'absolute',
             left: '50%',
@@ -281,9 +279,8 @@ export default function WeeklySkinDeco({ skinId }: { skinId: SkinId }) {
       <div aria-hidden style={{ pointerEvents: 'none', position: 'absolute', inset: 0, overflow: 'hidden' }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1775155638287-274322d26451?w=1400&q=80&auto=format&fit=crop"
+          src="/weekly/nps.jpg"
           alt=""
-          crossOrigin="anonymous"
           style={{
             position: 'absolute',
             left: 0,

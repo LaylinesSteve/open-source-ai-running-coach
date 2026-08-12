@@ -294,6 +294,17 @@ export default function WeeklyStravaRecap({
       await document.fonts.ready;
     }
 
+    // Wait for same-origin theme photos so they embed in the export.
+    const pendingImages = Array.from(cardRef.current.querySelectorAll('img')).map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        const done = () => resolve();
+        img.addEventListener('load', done, { once: true });
+        img.addEventListener('error', done, { once: true });
+      });
+    });
+    await Promise.all(pendingImages);
+
     const isClear = previewSkinId === 'glass';
 
     const dataUrl = await toPng(cardRef.current, {
