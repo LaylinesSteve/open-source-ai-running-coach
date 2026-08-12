@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import type { WeeklySessionWeek } from '@/lib/weekly-data';
 import {
   CONTROLS,
@@ -284,20 +284,50 @@ export default function WeeklyStravaRecap({
   const download = async () => {
     if (!cardRef.current || downloading) return;
     setDownloading(true);
+    setThemeMessage(null);
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        useCORS: true,
-        allowTaint: false,
-        scale: 3,
-        backgroundColor: previewSkinId === 'glass' ? null : undefined,
-        logging: false,
+      // Ensure webfonts used on the card are ready before rasterizing.
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      const solidFallback: Record<SkinId, string> = {
+        blaze: '#08090b',
+        confetti: '#fbe9f7',
+        chromepop: '#0a0a0c',
+        psychedelic: '#120018',
+        glamor: '#e8e2d4',
+        luxury: '#0a0a08',
+        americana: '#ded4bf',
+        mtv: '#12061f',
+        nps: '#0d1a0d',
+        glass: glassInk === 'light' ? '#1a1a1a' : '#ebebeb',
+      };
+
+      const dataUrl = await toPng(cardRef.current, {
+        cacheBust: true,
+        pixelRatio: Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2),
+        backgroundColor: solidFallback[previewSkinId],
+        style: {
+          // Re-apply skin tokens on the capture root (vars live on an ancestor in the live DOM).
+          ...skin.vars,
+          ...(previewSkinId === 'glass' && glassInk === 'light' ? GLASS_WHITE : {}),
+        },
       });
+
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = `weekly-recap-${previewSkinId}.png`;
-      link.href = canvas.toDataURL('image/png');
+      link.href = url;
+      document.body.appendChild(link);
       link.click();
-    } catch {
-      setThemeMessage('Could not download image.');
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Weekly recap download failed', err);
+      setThemeMessage('Could not download image. Try again in a moment.');
     } finally {
       setDownloading(false);
     }
@@ -669,6 +699,9 @@ export default function WeeklyStravaRecap({
         <article
           ref={cardRef}
           style={{
+            // Duplicate skin tokens here so export/capture has them on the node itself.
+            ...(skin.vars as CSSProperties),
+            ...(previewSkinId === 'glass' && glassInk === 'light' ? (GLASS_WHITE as CSSProperties) : {}),
             position: 'relative',
             width: '100%',
             overflow: 'hidden',
@@ -676,6 +709,7 @@ export default function WeeklyStravaRecap({
             background: 'var(--card)',
             border: '1px solid var(--border)',
             boxShadow: previewSkinId === 'glass' ? 'none' : '0 40px 80px -30px rgba(0,0,0,0.9)',
+            color: 'var(--ink)',
           }}
         >
           <div style={{ height: 3, width: '100%', background: 'var(--strip)' }} />
@@ -1066,69 +1100,11 @@ export default function WeeklyStravaRecap({
               <PaceLine runs={runsOnly} unit={unit} />
             </section>
 
-            <footer
-              style={{
-                marginTop: 24,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                borderTop: '1px solid var(--border)',
-                paddingTop: 20,
-                flexWrap: 'wrap',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {(['km', 'mi'] as const).map((u) => (
-                  <button
-                    key={u}
-                    type="button"
-                    onClick={() => setUnit(u)}
-                    style={{
-                      padding: '6px 14px',
-                      fontSize: 11,
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.12em',
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: unit === u ? 'var(--accent)' : 'rgba(127,127,127,0.14)',
-                      color: unit === u ? 'var(--btn-fg)' : 'var(--ink-2)',
-                      fontFamily: 'var(--font-mono)',
-                      ...ctl(u === 'km' ? 0 : 1),
-                    }}
-                  >
-                    {u}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={copy}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '10px 20px',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: 'var(--btn)',
-                  color: 'var(--btn-fg)',
-                  filter: 'drop-shadow(0 5px 10px var(--btn-shadow))',
-                  fontFamily: 'var(--font-display)',
-                  ...ctl(0),
-                }}
-              >
-                {copied ? 'Link copied ✓' : 'Share recap'}
-              </button>
-            </footer>
-
             <p
               style={{
-                margin: '16px 0 0',
+                margin: '24px 0 0',
+                paddingTop: 20,
+                borderTop: '1px solid var(--border)',
                 textAlign: 'center',
                 fontSize: 10,
                 textTransform: 'uppercase',
@@ -1148,76 +1124,142 @@ export default function WeeklyStravaRecap({
           style={{
             marginTop: 16,
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: 8,
-            flexWrap: 'wrap',
+            gap: 12,
           }}
         >
-          {previewSkinId === 'glass' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}
+          >
+            {previewSkinId === 'glass' && (
+              <button
+                type="button"
+                onClick={() => setGlassInk((v) => (v === 'dark' ? 'light' : 'dark'))}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 16px',
+                  fontSize: 12,
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: glassInk === 'dark' ? '#1a1a1a' : '#f0f0f0',
+                  color: glassInk === 'dark' ? '#fff' : '#0a0a0a',
+                  borderRadius: CONTROLS.glass.radius,
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                }}
+              >
+                {glassInk === 'dark' ? '◐ Dark text' : '◑ Light text'}
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => setGlassInk((v) => (v === 'dark' ? 'light' : 'dark'))}
+              className="weekly-download-btn"
+              onClick={download}
+              disabled={downloading}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 6,
-                padding: '10px 16px',
+                gap: 8,
+                padding: '10px 24px',
                 fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: '0.14em',
                 textTransform: 'uppercase',
                 border: 'none',
-                cursor: 'pointer',
-                background: glassInk === 'dark' ? '#1a1a1a' : '#f0f0f0',
-                color: glassInk === 'dark' ? '#fff' : '#0a0a0a',
-                borderRadius: CONTROLS.glass.radius,
-                fontFamily: 'Inter, system-ui, sans-serif',
+                cursor: downloading ? 'wait' : 'pointer',
+                background: 'var(--btn)',
+                color: 'var(--btn-fg)',
+                filter: 'drop-shadow(0 4px 8px var(--btn-shadow))',
+                fontFamily: 'var(--font-mono)',
+                opacity: downloading ? 0.6 : 1,
+                ...ctl(0),
               }}
             >
-              {glassInk === 'dark' ? '◐ Dark text' : '◑ Light text'}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M7 1v8M4 6l3 3 3-3" />
+                <path d="M1 11h12" />
+              </svg>
+              {downloading ? 'Saving…' : 'Download image'}
             </button>
-          )}
-          <button
-            type="button"
-            className="weekly-download-btn"
-            onClick={download}
-            disabled={downloading}
+          </div>
+
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              padding: '10px 24px',
-              fontSize: 12,
-              fontWeight: 700,
-              letterSpacing: '0.14em',
-              textTransform: 'uppercase',
-              border: 'none',
-              cursor: downloading ? 'wait' : 'pointer',
-              background: 'var(--btn)',
-              color: 'var(--btn-fg)',
-              filter: 'drop-shadow(0 4px 8px var(--btn-shadow))',
-              fontFamily: 'var(--font-mono)',
-              opacity: downloading ? 0.6 : 1,
-              ...ctl(0),
+              justifyContent: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
             }}
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 14 14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {(['km', 'mi'] as const).map((u) => (
+                <button
+                  key={u}
+                  type="button"
+                  onClick={() => setUnit(u)}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.12em',
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: unit === u ? 'var(--accent)' : 'rgba(127,127,127,0.14)',
+                    color: unit === u ? 'var(--btn-fg)' : 'var(--ink-2)',
+                    fontFamily: 'var(--font-mono)',
+                    ...ctl(u === 'km' ? 0 : 1),
+                  }}
+                >
+                  {u}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              onClick={copy}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '10px 20px',
+                fontSize: 13,
+                fontWeight: 700,
+                border: 'none',
+                cursor: 'pointer',
+                background: 'var(--btn)',
+                color: 'var(--btn-fg)',
+                filter: 'drop-shadow(0 5px 10px var(--btn-shadow))',
+                fontFamily: 'var(--font-display)',
+                ...ctl(0),
+              }}
             >
-              <path d="M7 1v8M4 6l3 3 3-3" />
-              <path d="M1 11h12" />
-            </svg>
-            {downloading ? 'Saving…' : 'Download image'}
-          </button>
+              {copied ? 'Link copied ✓' : 'Share recap'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
