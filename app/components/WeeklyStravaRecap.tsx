@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import html2canvas from 'html2canvas';
-import { toCanvas, toPng } from 'html-to-image';
+import { toPng } from 'html-to-image';
 import type { WeeklySessionWeek } from '@/lib/weekly-data';
 import {
   CONTROLS,
@@ -16,11 +15,6 @@ import {
   isSkinId,
   type SkinId,
 } from '@/lib/weekly-skins';
-import {
-  canvasToPngBlob,
-  cornersLookOpaque,
-  knockoutCornerMatte,
-} from '@/lib/transparent-sticker';
 import WeeklySkinDeco from '@/app/components/WeeklySkinDeco';
 
 const KM_TO_MI = 0.621371;
@@ -293,89 +287,6 @@ export default function WeeklyStravaRecap({
     nps: '#0d1a0d',
   };
 
-  const forceClearStyles = (node: HTMLElement) => {
-    node.style.setProperty('background', 'transparent', 'important');
-    node.style.setProperty('background-color', 'rgba(0,0,0,0)', 'important');
-    node.style.setProperty('background-image', 'none', 'important');
-    node.style.setProperty('box-shadow', 'none', 'important');
-  };
-
-  /**
-   * Clear theme: export a tight sticker PNG with a real alpha channel.
-   * (Strava uses Instagram’s native sticker pasteboard — websites can’t.
-   * A transparent sticker PNG is the closest web equivalent.)
-   */
-  const buildClearStickerBlob = async (): Promise<Blob> => {
-    if (!cardRef.current) throw new Error('Recap card not ready');
-    if (document.fonts?.ready) await document.fonts.ready;
-
-    const el = cardRef.current;
-    const scale = Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2);
-    // WebKit usually mattes transparent HTML with white; light-ink Clear often gets black.
-    const matte = glassInk === 'light' ? { r: 0, g: 0, b: 0 } : { r: 255, g: 255, b: 255 };
-
-    const finish = async (canvas: HTMLCanvasElement) => {
-      knockoutCornerMatte(canvas, matte);
-      // If corners are still opaque, try the opposite matte (Safari varies).
-      if (cornersLookOpaque(canvas)) {
-        knockoutCornerMatte(
-          canvas,
-          glassInk === 'light' ? { r: 255, g: 255, b: 255 } : { r: 0, g: 0, b: 0 }
-        );
-      }
-      // Also knock common gray page matte used in the Clear preview.
-      if (cornersLookOpaque(canvas)) {
-        knockoutCornerMatte(canvas, { r: 235, g: 235, b: 235 }, 40);
-      }
-      return canvasToPngBlob(canvas);
-    };
-
-    try {
-      const canvas = await html2canvas(el, {
-        backgroundColor: null,
-        scale,
-        useCORS: true,
-        logging: false,
-        // Re-apply tokens on the clone — live vars also live on ancestors.
-        onclone: (_doc: Document, clone: HTMLElement) => {
-          const root = clone;
-          Object.entries(skin.vars).forEach(([k, v]) => root.style.setProperty(k, v));
-          if (glassInk === 'light') {
-            Object.entries(GLASS_WHITE).forEach(([k, v]) => root.style.setProperty(k, v));
-          }
-          forceClearStyles(root);
-          root.querySelectorAll<HTMLElement>('*').forEach((child) => {
-            const bg = child.style.background || child.style.backgroundColor;
-            if (!bg) return;
-            if (bg === 'transparent' || bg.includes('rgba(0, 0, 0, 0)') || bg === 'var(--card)') {
-              forceClearStyles(child);
-            }
-          });
-        },
-      });
-      return finish(canvas);
-    } catch (primaryErr) {
-      console.warn('html2canvas Clear export failed, falling back', primaryErr);
-      // Safari often needs a warm-up pass with html-to-image.
-      const opts = {
-        cacheBust: true,
-        pixelRatio: scale,
-        style: {
-          ...skin.vars,
-          ...(glassInk === 'light' ? GLASS_WHITE : {}),
-          background: 'transparent',
-          backgroundColor: 'rgba(0,0,0,0)',
-          backgroundImage: 'none',
-          boxShadow: 'none',
-        },
-        onclone: (_doc: Document, clone: HTMLElement) => forceClearStyles(clone),
-      };
-      await toCanvas(el, opts);
-      const canvas = await toCanvas(el, opts);
-      return finish(canvas);
-    }
-  };
-
   /** Capture the card and composite onto a 1080×1920 Instagram Story canvas. */
   const buildStoryPngBlob = async (): Promise<Blob> => {
     if (!cardRef.current) throw new Error('Recap card not ready');
@@ -383,16 +294,26 @@ export default function WeeklyStravaRecap({
       await document.fonts.ready;
     }
 
-    if (previewSkinId === 'glass') {
-      return buildClearStickerBlob();
-    }
+    const isClear = previewSkinId === 'glass';
 
     const dataUrl = await toPng(cardRef.current, {
       cacheBust: true,
       pixelRatio: Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2),
-      backgroundColor: solidFallback[previewSkinId],
+      // Omit background for Clear so the PNG keeps a transparent alpha channel.
+      ...(isClear
+        ? {}
+        : { backgroundColor: solidFallback[previewSkinId] }),
       style: {
         ...skin.vars,
+        ...(isClear && glassInk === 'light' ? GLASS_WHITE : {}),
+        ...(isClear
+          ? {
+              background: 'transparent',
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
+              boxShadow: 'none',
+            }
+          : {}),
       },
     });
 
@@ -412,8 +333,12 @@ export default function WeeklyStravaRecap({
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) throw new Error('Could not create canvas');
 
-    ctx.fillStyle = solidFallback[previewSkinId];
-    ctx.fillRect(0, 0, STORY_W, STORY_H);
+    if (isClear) {
+      ctx.clearRect(0, 0, STORY_W, STORY_H);
+    } else {
+      ctx.fillStyle = solidFallback[previewSkinId];
+      ctx.fillRect(0, 0, STORY_W, STORY_H);
+    }
 
     // Keep content in the Stories safe zone (away from top/bottom system UI).
     const padX = 64;
@@ -427,7 +352,9 @@ export default function WeeklyStravaRecap({
     const dy = (STORY_H - dh) / 2;
     ctx.drawImage(img, dx, dy, dw, dh);
 
-    return canvasToPngBlob(canvas);
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('Could not encode story image');
+    return blob;
   };
 
   const saveBlob = (blob: Blob, filename: string) => {
@@ -446,26 +373,16 @@ export default function WeeklyStravaRecap({
     setDownloading(true);
     setThemeMessage(null);
     try {
-      const isClear = previewSkinId === 'glass';
       const blob = await buildStoryPngBlob();
-      const filename = isClear
-        ? `weekly-recap-sticker-clear.png`
-        : `weekly-recap-story-${previewSkinId}.png`;
+      const filename = `weekly-recap-story-${previewSkinId}.png`;
       const file = new File([blob], filename, { type: 'image/png' });
 
       // Phones can't write directly to the camera roll from the web.
       // The share sheet is the supported path — on iOS/Android, choose "Save Image".
       if (isMobile && typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({
-            files: [file],
-            title: isClear ? 'Weekly recap sticker' : 'Weekly recap',
-          });
-          setThemeMessage(
-            isClear
-              ? 'Saved. In Instagram Stories, add it as a sticker so the background stays clear.'
-              : 'Choose “Save Image” to add it to your camera roll.'
-          );
+          await navigator.share({ files: [file] });
+          setThemeMessage('Choose “Save Image” to add it to your camera roll.');
           return;
         } catch (shareErr) {
           const name = shareErr instanceof Error ? shareErr.name : '';
@@ -476,13 +393,7 @@ export default function WeeklyStravaRecap({
 
       saveBlob(blob, filename);
       if (isMobile) {
-        setThemeMessage(
-          isClear
-            ? 'Sticker downloaded. In Stories, add it as a sticker for a clear background.'
-            : 'Image downloaded — open it and tap Save Image for your camera roll.'
-        );
-      } else if (isClear) {
-        setThemeMessage('Clear sticker saved as a transparent PNG.');
+        setThemeMessage('Image downloaded — open it and tap Save Image for your camera roll.');
       }
     } catch (err) {
       console.error('Weekly recap download failed', err);
@@ -1369,15 +1280,7 @@ export default function WeeklyStravaRecap({
                 <path d="M7 1v8M4 6l3 3 3-3" />
                 <path d="M1 11h12" />
               </svg>
-              {downloading
-                ? 'Saving…'
-                : previewSkinId === 'glass'
-                  ? isMobile
-                    ? 'Save clear sticker'
-                    : 'Download clear sticker'
-                  : isMobile
-                    ? 'Save to Photos'
-                    : 'Download image'}
+              {downloading ? 'Saving…' : isMobile ? 'Save to Photos' : 'Download image'}
             </button>
           </div>
 
