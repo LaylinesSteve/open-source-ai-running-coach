@@ -173,9 +173,14 @@ export default function WeeklyStravaRecap({
   const [hover, setHover] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [weekIndex, setWeekIndex] = useState(() => Math.max(0, weeks.length - 1));
   const [glassInk, setGlassInk] = useState<'dark' | 'light'>('dark');
   const cardRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+  }, []);
   const [previewSkinId, setPreviewSkinId] = useState<SkinId>(() =>
     savedSkinId && isSkinId(savedSkinId) ? savedSkinId : DEFAULT_SKIN_ID
   );
@@ -354,10 +359,30 @@ export default function WeeklyStravaRecap({
     setThemeMessage(null);
     try {
       const blob = await buildStoryPngBlob();
-      saveBlob(blob, `weekly-recap-story-${previewSkinId}.png`);
+      const filename = `weekly-recap-story-${previewSkinId}.png`;
+      const file = new File([blob], filename, { type: 'image/png' });
+
+      // Phones can't write directly to the camera roll from the web.
+      // The share sheet is the supported path — on iOS/Android, choose "Save Image".
+      if (isMobile && typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file] });
+          setThemeMessage('Choose “Save Image” to add it to your camera roll.');
+          return;
+        } catch (shareErr) {
+          const name = shareErr instanceof Error ? shareErr.name : '';
+          if (name === 'AbortError') return;
+          // Fall through to anchor download if share fails for another reason.
+        }
+      }
+
+      saveBlob(blob, filename);
+      if (isMobile) {
+        setThemeMessage('Image downloaded — open it and tap Save Image for your camera roll.');
+      }
     } catch (err) {
       console.error('Weekly recap download failed', err);
-      setThemeMessage('Could not download image. Try again in a moment.');
+      setThemeMessage('Could not save image. Try again in a moment.');
     } finally {
       setDownloading(false);
     }
@@ -396,7 +421,7 @@ export default function WeeklyStravaRecap({
       const name = err instanceof Error ? err.name : '';
       if (name === 'AbortError') return; // user dismissed share sheet
       console.error('Weekly recap Instagram share failed', err);
-      setThemeMessage('Could not share to Instagram. Try Download image instead.');
+      setThemeMessage('Could not share to Instagram. Try Save to Photos instead.');
     } finally {
       setSharing(false);
     }
@@ -1291,7 +1316,7 @@ export default function WeeklyStravaRecap({
                 <path d="M7 1v8M4 6l3 3 3-3" />
                 <path d="M1 11h12" />
               </svg>
-              {downloading ? 'Saving…' : 'Download image'}
+              {downloading ? 'Saving…' : isMobile ? 'Save to Photos' : 'Download image'}
             </button>
           </div>
 
