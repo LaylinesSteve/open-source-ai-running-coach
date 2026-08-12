@@ -800,10 +800,6 @@ export default function WeeklyStravaRecap({
             width: '100%',
             maxWidth: 360,
             margin: '0 auto',
-            // Instagram Story frame (9:16)
-            aspectRatio: '9 / 16',
-            display: 'flex',
-            flexDirection: 'column',
             overflow: 'hidden',
             borderRadius: 'var(--radius)',
             background: 'var(--card)',
@@ -812,22 +808,19 @@ export default function WeeklyStravaRecap({
             color: 'var(--ink)',
           }}
         >
-          <div style={{ height: 3, width: '100%', flexShrink: 0, background: 'var(--strip)' }} />
+          <div style={{ height: 3, width: '100%', background: 'var(--strip)' }} />
           <WeeklySkinDeco skinId={previewSkinId} />
 
-          <div
-            style={{
-              position: 'relative',
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '22px 22px 20px',
-              boxSizing: 'border-box',
-            }}
-          >
-            <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ position: 'relative', padding: '22px 22px 20px' }}>
+            <header
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexShrink: 0,
+              }}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
                 <div
                   style={{
@@ -948,7 +941,7 @@ export default function WeeklyStravaRecap({
               </span>
             </header>
 
-            <div style={{ marginTop: 'clamp(18px, 3.5vh, 28px)' }}>
+            <div style={{ marginTop: 22 }}>
               <p
                 style={{
                   margin: 0,
@@ -968,7 +961,7 @@ export default function WeeklyStravaRecap({
                     lineHeight: 0.85,
                     letterSpacing: '-0.03em',
                     fontVariantNumeric: 'tabular-nums',
-                    fontSize: 'clamp(48px, 14vw, 72px)',
+                    fontSize: 'clamp(48px, 14vw, 68px)',
                     color: 'var(--ink)',
                     fontFamily: 'var(--font-display)',
                   }}
@@ -1007,7 +1000,7 @@ export default function WeeklyStravaRecap({
               </div>
             </div>
 
-            <section style={{ marginTop: 'clamp(16px, 2.8vh, 24px)', flex: '1 1 auto', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+            <section style={{ marginTop: 22 }}>
               <div
                 style={{
                   marginBottom: 12,
@@ -1053,9 +1046,7 @@ export default function WeeklyStravaRecap({
               <div
                 style={{
                   display: 'flex',
-                  flex: 1,
-                  minHeight: 170,
-                  maxHeight: 260,
+                  height: 148,
                   alignItems: 'flex-end',
                   gap: 8,
                   borderBottom: '1px solid var(--grid)',
@@ -1063,7 +1054,7 @@ export default function WeeklyStravaRecap({
               >
                 {WEEK.map((r, i) => {
                   const active = hover === i;
-                  const h = r.dist > 0 ? Math.max(6, (r.dist / maxDist) * 100) : 0;
+                  const h = r.dist > 0 ? Math.max(6, (r.dist / maxDist) * 128) : 0;
                   const useActiveBar = swapBars ? !active : active;
                   return (
                     <button
@@ -1103,8 +1094,7 @@ export default function WeeklyStravaRecap({
                         <div
                           style={{
                             width: '100%',
-                            height: `${h}%`,
-                            maxHeight: '100%',
+                            height: h,
                             background: useActiveBar ? 'var(--bar-active)' : 'var(--bar)',
                             boxShadow: active ? '0 0 18px var(--bar-glow)' : 'none',
                             borderTopLeftRadius: sharp ? 0 : 5,
@@ -1150,21 +1140,20 @@ export default function WeeklyStravaRecap({
 
             <section
               style={{
-                marginTop: 'clamp(14px, 2.4vh, 22px)',
+                marginTop: 18,
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
                 overflow: 'hidden',
                 border: '1px solid var(--border)',
                 background: 'var(--tile)',
                 borderRadius: sharp ? 0 : 16,
-                flexShrink: 0,
               }}
             >
               {stats.map((s, i) => (
                 <div
                   key={s.label}
                   style={{
-                    padding: '14px 16px',
+                    padding: '12px 14px',
                     borderRight: i % 2 === 0 ? '1px solid var(--border)' : 'none',
                     borderBottom: i < 2 ? '1px solid var(--border)' : 'none',
                   }}
@@ -1184,7 +1173,7 @@ export default function WeeklyStravaRecap({
                   <p
                     style={{
                       margin: '4px 0 0',
-                      fontSize: 26,
+                      fontSize: 22,
                       fontWeight: 800,
                       lineHeight: 1,
                       fontVariantNumeric: 'tabular-nums',
@@ -1199,7 +1188,7 @@ export default function WeeklyStravaRecap({
               ))}
             </section>
 
-            <section style={{ marginTop: 'clamp(14px, 2.4vh, 22px)', flexShrink: 0 }}>
+            <section style={{ marginTop: 18 }}>
               <p
                 style={{
                   margin: '0 0 8px',
@@ -1226,7 +1215,6 @@ export default function WeeklyStravaRecap({
                 letterSpacing: '0.22em',
                 fontFamily: 'var(--font-mono)',
                 color: 'var(--muted)',
-                flexShrink: 0,
               }}
             >
               {connected
