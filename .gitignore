@@ -7,3 +7,4 @@ strava_activities.json
 node_modules/
 .next/
 out/
+*.tsbuildinfo
