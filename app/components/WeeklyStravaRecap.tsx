@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import html2canvas from 'html2canvas';
 import type { WeeklySessionWeek } from '@/lib/weekly-data';
 import {
   CONTROLS,
@@ -14,6 +15,7 @@ import {
   isSkinId,
   type SkinId,
 } from '@/lib/weekly-skins';
+import WeeklySkinDeco from '@/app/components/WeeklySkinDeco';
 
 const KM_TO_MI = 0.621371;
 
@@ -170,8 +172,10 @@ export default function WeeklyStravaRecap({
   const [unit, setUnit] = useState<'km' | 'mi'>('mi');
   const [hover, setHover] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [weekIndex, setWeekIndex] = useState(() => Math.max(0, weeks.length - 1));
   const [glassInk, setGlassInk] = useState<'dark' | 'light'>('dark');
+  const cardRef = useRef<HTMLElement>(null);
   const [previewSkinId, setPreviewSkinId] = useState<SkinId>(() =>
     savedSkinId && isSkinId(savedSkinId) ? savedSkinId : DEFAULT_SKIN_ID
   );
@@ -277,6 +281,28 @@ export default function WeeklyStravaRecap({
       });
   };
 
+  const download = async () => {
+    if (!cardRef.current || downloading) return;
+    setDownloading(true);
+    try {
+      const canvas = await html2canvas(cardRef.current, {
+        useCORS: true,
+        allowTaint: false,
+        scale: 3,
+        backgroundColor: previewSkinId === 'glass' ? null : undefined,
+        logging: false,
+      });
+      const link = document.createElement('a');
+      link.download = `weekly-recap-${previewSkinId}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    } catch {
+      setThemeMessage('Could not download image.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const stats = [
     { label: 'Moving time', value: clock(totals.time), sub: `across ${totals.runs} runs` },
     { label: 'Avg pace', value: paceStr(avgPaceSec), sub: `min / ${unit}` },
@@ -315,10 +341,24 @@ export default function WeeklyStravaRecap({
         @keyframes weeklySpinSlow {
           to { transform: translate(-50%, -50%) rotate(360deg); }
         }
+        @keyframes weeklyTwinkle {
+          0%, 100% { opacity: 0.15; transform: scale(0.7); }
+          50% { opacity: 1; transform: scale(1.1); }
+        }
+        @keyframes weeklyFloatPiece {
+          0% { transform: translateY(0) rotate(0deg); }
+          50% { transform: translateY(-10px) rotate(180deg); }
+          100% { transform: translateY(0) rotate(360deg); }
+        }
+        @keyframes weeklySheen {
+          0% { transform: translateX(-120%) skewX(-18deg); }
+          100% { transform: translateX(220%) skewX(-18deg); }
+        }
         .weekly-connect-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .weekly-connect-btn:active { transform: translateY(0); }
         .weekly-bar-btn { background: none; border: none; padding: 0; cursor: default; }
         .weekly-skin-chip:hover { opacity: 1 !important; }
+        .weekly-download-btn:active { transform: scale(0.95); }
       `}</style>
 
       <div
@@ -590,30 +630,6 @@ export default function WeeklyStravaRecap({
             })}
           </div>
 
-          {previewSkinId === 'glass' && (
-            <div style={{ marginTop: 10, display: 'flex', justifyContent: 'center' }}>
-              <button
-                type="button"
-                onClick={() => setGlassInk((v) => (v === 'dark' ? 'light' : 'dark'))}
-                style={{
-                  padding: '8px 14px',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: '0.12em',
-                  textTransform: 'uppercase',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: glassInk === 'dark' ? '#1a1a1a' : '#f0f0f0',
-                  color: glassInk === 'dark' ? '#fff' : '#0a0a0a',
-                  borderRadius: CONTROLS.glass.radius,
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                }}
-              >
-                {glassInk === 'dark' ? '◐ Dark text' : '◑ Light text'}
-              </button>
-            </div>
-          )}
-
           {themeMessage && (
             <p
               style={{
@@ -644,6 +660,7 @@ export default function WeeklyStravaRecap({
         )}
 
         <article
+          ref={cardRef}
           style={{
             position: 'relative',
             width: '100%',
@@ -655,6 +672,7 @@ export default function WeeklyStravaRecap({
           }}
         >
           <div style={{ height: 3, width: '100%', background: 'var(--strip)' }} />
+          <WeeklySkinDeco skinId={previewSkinId} />
 
           <div style={{ position: 'relative', padding: '24px 28px 28px' }}>
             <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
@@ -1118,6 +1136,82 @@ export default function WeeklyStravaRecap({
             </p>
           </div>
         </article>
+
+        <div
+          style={{
+            marginTop: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+          }}
+        >
+          {previewSkinId === 'glass' && (
+            <button
+              type="button"
+              onClick={() => setGlassInk((v) => (v === 'dark' ? 'light' : 'dark'))}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '10px 16px',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                border: 'none',
+                cursor: 'pointer',
+                background: glassInk === 'dark' ? '#1a1a1a' : '#f0f0f0',
+                color: glassInk === 'dark' ? '#fff' : '#0a0a0a',
+                borderRadius: CONTROLS.glass.radius,
+                fontFamily: 'Inter, system-ui, sans-serif',
+              }}
+            >
+              {glassInk === 'dark' ? '◐ Dark text' : '◑ Light text'}
+            </button>
+          )}
+          <button
+            type="button"
+            className="weekly-download-btn"
+            onClick={download}
+            disabled={downloading}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 24px',
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              border: 'none',
+              cursor: downloading ? 'wait' : 'pointer',
+              background: 'var(--btn)',
+              color: 'var(--btn-fg)',
+              filter: 'drop-shadow(0 4px 8px var(--btn-shadow))',
+              fontFamily: 'var(--font-mono)',
+              opacity: downloading ? 0.6 : 1,
+              ...ctl(0),
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M7 1v8M4 6l3 3 3-3" />
+              <path d="M1 11h12" />
+            </svg>
+            {downloading ? 'Saving…' : 'Download image'}
+          </button>
+        </div>
       </div>
     </div>
   );
