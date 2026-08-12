@@ -466,6 +466,24 @@ export default function WeeklyStravaRecap({
         .weekly-bar-btn { background: none; border: none; padding: 0; cursor: default; }
         .weekly-skin-chip:hover { opacity: 1 !important; }
         .weekly-download-btn:active { transform: scale(0.95); }
+        .weekly-clear-card {
+          -webkit-font-smoothing: antialiased;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+        }
+        .weekly-clear-card.weekly-clear-card--light {
+          text-shadow: 0 1px 3px rgba(0,0,0,0.55);
+        }
+        .weekly-clear-card p,
+        .weekly-clear-card span,
+        .weekly-clear-card div,
+        .weekly-clear-card button,
+        .weekly-clear-card text {
+          font-weight: 700;
+        }
+        .weekly-clear-card [style*="font-weight: 800"],
+        .weekly-clear-card [style*="font-weight: 900"] {
+          font-weight: 900 !important;
+        }
       `}</style>
 
       <div
@@ -768,6 +786,11 @@ export default function WeeklyStravaRecap({
 
         <article
           ref={cardRef}
+          className={
+            previewSkinId === 'glass'
+              ? `weekly-clear-card${glassInk === 'light' ? ' weekly-clear-card--light' : ''}`
+              : undefined
+          }
           style={{
             // Duplicate skin tokens here so export/capture has them on the node itself.
             ...(skin.vars as CSSProperties),
