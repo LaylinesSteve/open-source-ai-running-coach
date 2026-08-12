@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import WeeklyStravaRecap from '@/app/components/WeeklyStravaRecap';
-import { DEMO_WEEKS } from '@/lib/weekly-session';
+import { DEMO_WEEKS } from '@/lib/weekly-data';
 
 type Props = {
   visible?: boolean;

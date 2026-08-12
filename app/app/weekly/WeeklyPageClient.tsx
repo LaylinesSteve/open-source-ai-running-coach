@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import WeeklyStravaRecap from '@/app/components/WeeklyStravaRecap';
-import { DEMO_WEEKS, type WeeklySessionWeek } from '@/lib/weekly-session';
+import { DEMO_WEEKS, type WeeklySessionWeek } from '@/lib/weekly-data';
 import { isSkinId, type SkinId } from '@/lib/weekly-skins';
 
 const DEMO_NAME = 'Maya Okonkwo';

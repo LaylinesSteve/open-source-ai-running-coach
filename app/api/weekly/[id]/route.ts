@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { fetchStravaActivities } from '@/lib/strava';
 import {
-  athleteDisplayName,
-  athleteInitials,
-  buildWeeklyWeeksFromActivities,
   getAccessTokenForWeeklySession,
   getWeeklySession,
   updateWeeklySession,
 } from '@/lib/weekly-session';
+import {
+  athleteDisplayName,
+  athleteInitials,
+  buildWeeklyWeeksFromActivities,
+} from '@/lib/weekly-data';
 import { isSkinId } from '@/lib/weekly-skins';
 
 export const dynamic = 'force-dynamic';

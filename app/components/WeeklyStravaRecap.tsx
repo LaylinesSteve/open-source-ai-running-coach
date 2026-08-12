@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import type { WeeklySessionWeek } from '@/lib/weekly-session';
+import type { WeeklySessionWeek } from '@/lib/weekly-data';
 import {
   CONTROLS,
   DEFAULT_SKIN_ID,
