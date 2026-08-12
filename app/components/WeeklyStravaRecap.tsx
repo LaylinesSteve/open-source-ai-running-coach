@@ -172,7 +172,6 @@ export default function WeeklyStravaRecap({
   const [unit, setUnit] = useState<'km' | 'mi'>('mi');
   const [hover, setHover] = useState<number | null>(null);
   const [downloading, setDownloading] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [weekIndex, setWeekIndex] = useState(() => Math.max(0, weeks.length - 1));
   const [glassInk, setGlassInk] = useState<'dark' | 'light'>('dark');
@@ -354,7 +353,7 @@ export default function WeeklyStravaRecap({
   };
 
   const download = async () => {
-    if (!cardRef.current || downloading || sharing) return;
+    if (!cardRef.current || downloading) return;
     setDownloading(true);
     setThemeMessage(null);
     try {
@@ -385,45 +384,6 @@ export default function WeeklyStravaRecap({
       setThemeMessage('Could not save image. Try again in a moment.');
     } finally {
       setDownloading(false);
-    }
-  };
-
-  const shareToInstagram = async () => {
-    if (!cardRef.current || sharing || downloading) return;
-    setSharing(true);
-    setThemeMessage(null);
-    try {
-      const blob = await buildStoryPngBlob();
-      const file = new File([blob], `weekly-recap-story-${previewSkinId}.png`, { type: 'image/png' });
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      // Best path: system share sheet (Instagram appears on phones).
-      if (typeof navigator.share === 'function' && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: 'Weekly running recap',
-          text: 'My weekly Strava recap',
-        });
-        return;
-      }
-
-      // Fallback: save the story image, then open Instagram.
-      saveBlob(blob, file.name);
-      if (isMobile) {
-        // Opens the Stories camera when the IG app is installed.
-        window.location.href = 'instagram://story-camera';
-        setThemeMessage('Image saved — choose it in Instagram Stories.');
-      } else {
-        window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
-        setThemeMessage('Story image saved — open Instagram on your phone to post it.');
-      }
-    } catch (err) {
-      const name = err instanceof Error ? err.name : '';
-      if (name === 'AbortError') return; // user dismissed share sheet
-      console.error('Weekly recap Instagram share failed', err);
-      setThemeMessage('Could not share to Instagram. Try Save to Photos instead.');
-    } finally {
-      setSharing(false);
     }
   };
 
@@ -1218,7 +1178,7 @@ export default function WeeklyStravaRecap({
               }}
             >
               {connected
-                ? `Powered by Strava${username ? ` · @${username}` : ''}`
+                ? `Powered by AVG Running${username ? ` · @${username}` : ''}`
                 : 'Sample preview · Connect Strava for your data'}
             </p>
           </div>
@@ -1313,58 +1273,32 @@ export default function WeeklyStravaRecap({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 12,
+              gap: 8,
               flexWrap: 'wrap',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {(['km', 'mi'] as const).map((u) => (
-                <button
-                  key={u}
-                  type="button"
-                  onClick={() => setUnit(u)}
-                  style={{
-                    padding: '6px 14px',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.12em',
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: unit === u ? 'var(--accent)' : 'rgba(127,127,127,0.14)',
-                    color: unit === u ? 'var(--btn-fg)' : 'var(--ink-2)',
-                    fontFamily: 'var(--font-mono)',
-                    ...ctl(u === 'km' ? 0 : 1),
-                  }}
-                >
-                  {u}
-                </button>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={shareToInstagram}
-              disabled={sharing || downloading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 20px',
-                fontSize: 13,
-                fontWeight: 700,
-                border: 'none',
-                cursor: sharing || downloading ? 'wait' : 'pointer',
-                background: 'var(--btn)',
-                color: 'var(--btn-fg)',
-                filter: 'drop-shadow(0 5px 10px var(--btn-shadow))',
-                fontFamily: 'var(--font-display)',
-                opacity: sharing ? 0.7 : 1,
-                ...ctl(0),
-              }}
-            >
-              {sharing ? 'Opening Instagram…' : 'Share to Instagram'}
-            </button>
+            {(['km', 'mi'] as const).map((u) => (
+              <button
+                key={u}
+                type="button"
+                onClick={() => setUnit(u)}
+                style={{
+                  padding: '6px 14px',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: unit === u ? 'var(--accent)' : 'rgba(127,127,127,0.14)',
+                  color: unit === u ? 'var(--btn-fg)' : 'var(--ink-2)',
+                  fontFamily: 'var(--font-mono)',
+                  ...ctl(u === 'km' ? 0 : 1),
+                }}
+              >
+                {u}
+              </button>
+            ))}
           </div>
         </div>
       </div>
