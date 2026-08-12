@@ -275,7 +275,7 @@ export default function WeeklyStravaRecap({
   const up = deltaPct >= 0;
   const runsOnly = WEEK.filter((r) => r.dist > 0);
 
-  const solidFallback: Record<SkinId, string> = {
+  const solidFallback: Record<Exclude<SkinId, 'glass'>, string> = {
     blaze: '#08090b',
     confetti: '#fbe9f7',
     chromepop: '#0a0a0c',
@@ -285,7 +285,6 @@ export default function WeeklyStravaRecap({
     americana: '#ded4bf',
     mtv: '#12061f',
     nps: '#0d1a0d',
-    glass: glassInk === 'light' ? '#1a1a1a' : '#ebebeb',
   };
 
   /** Capture the card and composite onto a 1080×1920 Instagram Story canvas. */
@@ -295,13 +294,26 @@ export default function WeeklyStravaRecap({
       await document.fonts.ready;
     }
 
+    const isClear = previewSkinId === 'glass';
+
     const dataUrl = await toPng(cardRef.current, {
       cacheBust: true,
       pixelRatio: Math.min(3, typeof window !== 'undefined' ? window.devicePixelRatio || 2 : 2),
-      backgroundColor: solidFallback[previewSkinId],
+      // Omit background for Clear so the PNG keeps a transparent alpha channel.
+      ...(isClear
+        ? {}
+        : { backgroundColor: solidFallback[previewSkinId] }),
       style: {
         ...skin.vars,
-        ...(previewSkinId === 'glass' && glassInk === 'light' ? GLASS_WHITE : {}),
+        ...(isClear && glassInk === 'light' ? GLASS_WHITE : {}),
+        ...(isClear
+          ? {
+              background: 'transparent',
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
+              boxShadow: 'none',
+            }
+          : {}),
       },
     });
 
@@ -318,11 +330,15 @@ export default function WeeklyStravaRecap({
     const canvas = document.createElement('canvas');
     canvas.width = STORY_W;
     canvas.height = STORY_H;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) throw new Error('Could not create canvas');
 
-    ctx.fillStyle = solidFallback[previewSkinId];
-    ctx.fillRect(0, 0, STORY_W, STORY_H);
+    if (isClear) {
+      ctx.clearRect(0, 0, STORY_W, STORY_H);
+    } else {
+      ctx.fillStyle = solidFallback[previewSkinId];
+      ctx.fillRect(0, 0, STORY_W, STORY_H);
+    }
 
     // Keep content in the Stories safe zone (away from top/bottom system UI).
     const padX = 64;
