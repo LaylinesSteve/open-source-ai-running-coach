@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { hasAccess } from '@/lib/auth';
+import { hasFormAccess } from '@/lib/auth';
 import { FORM_WINDOW_DAYS } from '@/lib/form-trends';
 import { daysAgo, downloadActivity, listRuns } from '@/lib/garmin';
 import { analyzeRun } from '@/lib/garmin-fit';
@@ -12,7 +12,7 @@ const BATCH_SIZE = 9;
 const CONCURRENCY = 3;
 
 export async function POST(request: Request) {
-  if (!(await hasAccess())) {
+  if (!(await hasFormAccess())) {
     return NextResponse.json({ error: 'Enter your passkey to continue.' }, { status: 401 });
   }
   const { fresh } = (await request.json().catch(() => ({}))) as { fresh?: boolean };

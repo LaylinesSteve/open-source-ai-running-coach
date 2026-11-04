@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
 const COOKIE_NAME = 'plan_access';
+const FORM_COOKIE_NAME = 'form_access';
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
 function safeEqual(a: string, b: string): boolean {
@@ -26,6 +27,28 @@ function accessToken(): string | null {
   return secret ? createHmac('sha256', secret).update(COOKIE_NAME).digest('hex') : null;
 }
 
+/** Key for the private link to /app/running-form. It opens that page only, so a leaked link can't reach plans or admin. */
+export function formLinkKey(): string | null {
+  const secret = process.env.COOKIE_SECRET || process.env.PASSKEY;
+  return secret ? createHmac('sha256', secret).update(FORM_COOKIE_NAME).digest('base64url') : null;
+}
+
+/** Swaps a private link for a cookie, and sends the browser to the clean URL so the key doesn't stay in the address bar. */
+export function openFormLink(key: string, cleanUrl: URL): NextResponse {
+  const response = NextResponse.redirect(cleanUrl);
+  const expected = formLinkKey();
+  if (expected && safeEqual(key, expected)) {
+    response.cookies.set(FORM_COOKIE_NAME, expected, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: COOKIE_MAX_AGE,
+      path: '/',
+    });
+  }
+  return response;
+}
+
 export async function setAccessCookie(): Promise<void> {
   const token = accessToken();
   if (!token) return;
@@ -44,6 +67,14 @@ export async function hasAccess(): Promise<boolean> {
   const value = cookieStore.get(COOKIE_NAME)?.value;
   const token = accessToken();
   return !!token && !!value && safeEqual(value, token);
+}
+
+export async function hasFormAccess(): Promise<boolean> {
+  if (await hasAccess()) return true;
+  const cookieStore = await cookies();
+  const value = cookieStore.get(FORM_COOKIE_NAME)?.value;
+  const key = formLinkKey();
+  return !!key && !!value && safeEqual(value, key);
 }
 
 export async function clearAccessCookie(): Promise<void> {

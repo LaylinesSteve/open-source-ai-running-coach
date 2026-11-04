@@ -46,6 +46,8 @@ To set it up:
 2. Set `GARMIN_PERSONAL_API_KEY` to that key, and redeploy if you changed it on Vercel.
 3. Open `/app/running-form`, enter `PASSKEY` and click **Analyze my runs**. The first time takes a few minutes, because each run's file is downloaded.
 
+The page has a private link you can bookmark, which opens it without the passkey. It doesn't open plans or admin, and changing `PASSKEY` turns it off. Treat it like a password.
+
 Runs are read only when you click that button. Only the per-run averages shown on the page are saved, in Redis. Activity files, GPS tracks and device details are never stored or sent to Gemini. Garmin keys expire after 30 days to one year, so renew yours when Garmin emails you.
 
 ## What is KV? Storage (Redis)

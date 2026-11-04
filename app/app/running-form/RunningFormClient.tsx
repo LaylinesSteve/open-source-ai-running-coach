@@ -88,11 +88,13 @@ export default function RunningFormClient({
   initialReview,
   initialUpdatedAt,
   today,
+  linkPath,
 }: {
   initialRuns: RunForm[];
   initialReview?: FormReview;
   initialUpdatedAt?: string;
   today: string;
+  linkPath: string;
 }) {
   const [runs, setRuns] = useState(initialRuns);
   const [review, setReview] = useState(initialReview);
@@ -103,6 +105,7 @@ export default function RunningFormClient({
   const [syncNote, setSyncNote] = useState('');
   const [reviewing, setReviewing] = useState(false);
   const [reviewError, setReviewError] = useState('');
+  const [linkNote, setLinkNote] = useState('');
 
   const from = shiftDate(today, -days + 1);
   const inRange = useMemo(() => runs.filter((run) => run.date >= from), [runs, from]);
@@ -179,6 +182,16 @@ export default function RunningFormClient({
       setReviewError('Could not write the review. Try again.');
     }
     setReviewing(false);
+  }
+
+  async function copyLink() {
+    const link = new URL(linkPath, window.location.origin).href;
+    try {
+      await navigator.clipboard.writeText(link);
+      setLinkNote('Copied.');
+    } catch {
+      setLinkNote(link);
+    }
   }
 
   return (
@@ -428,6 +441,20 @@ export default function RunningFormClient({
             )}
           </>
         )}
+
+        <h2 style={heading}>Private link</h2>
+        <p style={{ ...muted, marginBottom: '0.75rem' }}>
+          Opens this page without the passkey, for anyone who has it, so don&apos;t share it. It
+          doesn&apos;t open your plans. Changing your passkey turns it off.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
+          <button type="button" onClick={copyLink} style={button}>
+            Copy link
+          </button>
+          <p role="status" style={{ ...muted, overflowWrap: 'anywhere' }}>
+            {linkNote}
+          </p>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { hasAccess } from '@/lib/auth';
+import { hasFormAccess } from '@/lib/auth';
 import { reviewForm } from '@/lib/form-review';
 import { getFormStore, setFormStore } from '@/lib/store';
 
 export const maxDuration = 60;
 
 export async function POST() {
-  if (!(await hasAccess())) {
+  if (!(await hasFormAccess())) {
     return NextResponse.json({ error: 'Enter your passkey to continue.' }, { status: 401 });
   }
   try {

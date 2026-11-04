@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
-import { hasAccess } from '@/lib/auth';
+import { formLinkKey, hasFormAccess } from '@/lib/auth';
 import { getFormStore } from '@/lib/store';
 import RunningFormClient from './RunningFormClient';
 
@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RunningFormPage() {
-  if (!(await hasAccess())) {
+  if (!(await hasFormAccess())) {
     redirect(`/app/unlock?next=${encodeURIComponent('/app/running-form')}`);
   }
   const { runs, review, updatedAt } = await getFormStore();
@@ -22,6 +22,7 @@ export default async function RunningFormPage() {
       initialReview={review}
       initialUpdatedAt={updatedAt}
       today={new Date().toISOString().slice(0, 10)}
+      linkPath={`/app/running-form?key=${formLinkKey()}`}
     />
   );
 }
