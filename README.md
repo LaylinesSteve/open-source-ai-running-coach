@@ -33,7 +33,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 
 ## Garmin data
 
-The coach can read your own Garmin data: the last 14 days of activities, sleep, HRV, Body Battery, stress, daily summaries and heart rate zones. It uses this in coach chat, progress updates and plan revisions.
+The coach can read your own Garmin data: activities, sleep, HRV, Body Battery, stress, daily summaries and heart rate zones. It sees the last 14 days in full, and the rest of the past 6 months as averages and totals for each 4-week block. It uses this in coach chat, progress updates and plan revisions. Data is pulled when one of those runs, not on a schedule.
 
 1. Create a key at [Garmin Connect → Personal API tokens](https://connect.garmin.com/app/settings/personalApiToken).
 2. Set `GARMIN_PERSONAL_API_KEY` to that key, and `GARMIN_PLAN_IDS` to your plan id (the id in `/app/plan/<id>`).
