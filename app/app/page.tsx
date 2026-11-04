@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
-import LandingWeeklySection from '@/app/components/LandingWeeklySection';
+import { FormVisual, PlanVisual, WeekVisual } from '@/app/components/ToolCardVisuals';
 
 const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left right left right B A
 
 const TOOLS: {
   title: string;
+  visual: ReactNode;
   badge?: string;
   body: string;
   note?: string;
@@ -16,6 +17,7 @@ const TOOLS: {
 }[] = [
   {
     title: 'Training plan',
+    visual: <PlanVisual />,
     body: 'A plan built from your goal, your race date and your Strava runs, with a coach you can ask anything.',
     note: 'Free · Takes under a minute',
     link: { label: 'Create my plan', href: '/app/form' },
@@ -23,12 +25,14 @@ const TOOLS: {
   },
   {
     title: 'Weekly recap',
+    visual: <WeekVisual />,
     body: 'Your mileage, pace and elevation for the week, straight from Strava.',
     note: 'Free · Connect Strava',
     link: { label: 'See my week', href: '/app/weekly' },
   },
   {
     title: 'Running form analysis',
+    visual: <FormVisual />,
     badge: 'Coming soon',
     body: 'See how your cadence, ground contact time and stride change at the same pace, using your Garmin data, then ask AI what to work on.',
   },
@@ -134,6 +138,22 @@ export default function HomePage() {
         .stagger-5 { animation-delay: 0.5s; }
         .egg-word { cursor: pointer; user-select: none; }
         .egg-word:hover { color: #e85d04; }
+        .landing-tools {
+          position: relative;
+          z-index: 1;
+          width: 100%;
+          max-width: 560px;
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 20px;
+          text-align: left;
+        }
+        @media (min-width: 960px) {
+          .landing-tools {
+            max-width: 1240px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+          }
+        }
         .landing-tool-card {
           transition: border-color 0.2s, background 0.2s;
         }
@@ -240,18 +260,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div
-            style={{
-              position: 'relative',
-              zIndex: 1,
-              width: '100%',
-              maxWidth: 1000,
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 270px), 1fr))',
-              gap: 16,
-              textAlign: 'left',
-            }}
-          >
+          <div className="landing-tools">
             {TOOLS.map((tool, i) => (
               <div
                 key={tool.title}
@@ -259,62 +268,64 @@ export default function HomePage() {
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
-                  padding: 24,
+                  overflow: 'hidden',
                   background: 'rgba(255,255,255,0.03)',
-                  borderRadius: 16,
+                  borderRadius: 20,
                   border: '1px solid rgba(255,255,255,0.08)',
                   opacity: visible.hero ? 1 : 0,
                   transform: visible.hero ? 'translateY(0)' : 'translateY(16px)',
                   transition: `opacity 0.7s ease ${0.45 + i * 0.08}s, transform 0.7s ease ${0.45 + i * 0.08}s, border-color 0.2s, background 0.2s`,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
-                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#f5f5f5' }}>{tool.title}</h2>
-                  {tool.badge && (
-                    <span
-                      style={{
-                        fontSize: '0.7rem',
-                        color: '#a3a3a3',
-                        border: '1px solid #404040',
-                        borderRadius: 999,
-                        padding: '2px 8px',
-                      }}
-                    >
-                      {tool.badge}
-                    </span>
+                {tool.visual}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px 24px 26px' }}>
+                  <h2 style={{ fontSize: '1.45rem', fontWeight: 700, margin: '0 0 10px', color: '#f5f5f5' }}>{tool.title}</h2>
+                  <p style={{ fontSize: '1rem', color: '#a3a3a3', lineHeight: 1.55, margin: '0 0 12px' }}>{tool.body}</p>
+                  {tool.note && (
+                    <p style={{ fontSize: '0.85rem', color: '#737373', margin: '0 0 18px' }}>{tool.note}</p>
                   )}
-                </div>
-                <p style={{ fontSize: '0.95rem', color: '#a3a3a3', lineHeight: 1.55, margin: '0 0 12px' }}>{tool.body}</p>
-                {tool.note && (
-                  <p style={{ fontSize: '0.8rem', color: '#737373', margin: '0 0 16px' }}>{tool.note}</p>
-                )}
-                {tool.link && (
                   <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
-                    <Link
-                      href={tool.link.href}
-                      className="landing-cta"
-                      style={{
-                        padding: '11px 18px',
-                        fontSize: '0.85rem',
-                        fontWeight: 600,
-                        color: '#fff',
-                        background: '#e85d04',
-                        borderRadius: 6,
-                        textDecoration: 'none',
-                      }}
-                    >
-                      {tool.link.label}
-                    </Link>
+                    {tool.link && (
+                      <Link
+                        href={tool.link.href}
+                        className="landing-cta"
+                        style={{
+                          padding: '13px 22px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          color: '#fff',
+                          background: '#e85d04',
+                          borderRadius: 8,
+                          textDecoration: 'none',
+                        }}
+                      >
+                        {tool.link.label}
+                      </Link>
+                    )}
+                    {tool.badge && (
+                      <span
+                        style={{
+                          padding: '12px 20px',
+                          fontSize: '0.95rem',
+                          fontWeight: 600,
+                          color: '#a3a3a3',
+                          border: '1px solid #404040',
+                          borderRadius: 8,
+                        }}
+                      >
+                        {tool.badge}
+                      </span>
+                    )}
                     {tool.secondary && (
                       <a
                         href={tool.secondary.href}
-                        style={{ fontSize: '0.85rem', color: '#a3a3a3', textUnderlineOffset: 3 }}
+                        style={{ fontSize: '0.9rem', color: '#a3a3a3', textUnderlineOffset: 3 }}
                       >
                         {tool.secondary.label}
                       </a>
                     )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
@@ -356,20 +367,12 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Weekly Strava summary */}
-        <div
-          ref={(el) => { sectionRefs.current.weekly = el; }}
-          data-section="weekly"
-        >
-          <LandingWeeklySection visible={!!visible.weekly} />
-        </div>
-
         {/* Benefits */}
         <section
           ref={(el) => { sectionRefs.current.benefits = el; }}
           data-section="benefits"
           style={{
-            padding: 'clamp(8px, 1.2vw, 14px) 24px clamp(64px, 12vw, 120px) 24px',
+            padding: 'clamp(48px, 8vw, 88px) 24px clamp(64px, 12vw, 120px) 24px',
             maxWidth: 900,
             margin: '0 auto',
           }}
