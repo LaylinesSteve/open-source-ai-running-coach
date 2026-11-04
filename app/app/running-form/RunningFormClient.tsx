@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, type CSSProperties } from 'react';
+import FormChat from './FormChat';
 import {
   FORM_METRICS,
   fadeChange,
@@ -9,6 +10,7 @@ import {
   recentChange,
   weeklyTrend,
   weeksBetween,
+  type FormChatMessage,
   type FormReview,
   type RunForm,
   type TrendPoint,
@@ -56,6 +58,13 @@ const control: CSSProperties = {
   fontSize: '0.9rem',
   fontFamily: 'inherit',
 };
+/** The pace filter decides what every chart below means, so it wears the chart color and stands out. */
+const paceControl: CSSProperties = {
+  ...control,
+  border: '2px solid #3987e5',
+  background: '#122031',
+  fontWeight: 600,
+};
 const cell: CSSProperties = {
   padding: '0.45rem 0.6rem',
   textAlign: 'right',
@@ -87,12 +96,14 @@ export default function RunningFormClient({
   initialRuns,
   initialReview,
   initialUpdatedAt,
+  initialChat,
   today,
   linkPath,
 }: {
   initialRuns: RunForm[];
   initialReview?: FormReview;
   initialUpdatedAt?: string;
+  initialChat: FormChatMessage[];
   today: string;
   linkPath: string;
 }) {
@@ -250,9 +261,18 @@ export default function RunningFormClient({
                   ))}
                 </select>
               </label>
-              <label style={{ ...muted, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <label
+                style={{
+                  ...muted,
+                  color: '#f5f5f5',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                }}
+              >
                 Pace per mile
-                <select value={bandValue} onChange={(e) => setChosenBand(e.target.value)} style={control}>
+                <select value={bandValue} onChange={(e) => setChosenBand(e.target.value)} style={paceControl}>
                   {bands.map(({ band: value, minutes }) => (
                     <option key={value} value={value}>
                       {paceLabel(value)} ({Math.round(minutes)} min)
@@ -439,6 +459,13 @@ export default function RunningFormClient({
                 )}
               </div>
             )}
+
+            <h2 style={heading}>Ask about your form</h2>
+            <p style={{ ...muted, marginBottom: '0.75rem' }}>
+              Ask about a trend, a pace or a specific run. Each question sends your form numbers to
+              Google Gemini.
+            </p>
+            <FormChat initialMessages={initialChat} />
           </>
         )}
 

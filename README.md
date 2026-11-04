@@ -39,6 +39,7 @@ Copy **`.env.example`** to **`.env`** and fill in:
 - **Trends:** weekly cadence, ground contact time and balance, stride, vertical oscillation and ratio, power and heart rate, if your watch records them. You can compare weeks at one pace, because form changes with pace. Walking and stops are left out.
 - **Long runs:** how each metric changed from the first quarter of a run to the last.
 - **AI review:** a written review of the same numbers, from Gemini, when you ask for it.
+- **Chat:** ask Gemini about a trend, a pace or a specific run. It sees the same numbers, and the conversation is saved in Redis.
 
 To set it up:
 

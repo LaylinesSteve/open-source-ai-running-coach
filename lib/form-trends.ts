@@ -28,6 +28,8 @@ export type RunForm = {
 
 export type FormReview = { text: string; at: string };
 
+export type FormChatMessage = { role: 'user' | 'assistant'; content: string; at: string };
+
 export type FormStore = {
   runs: RunForm[];
   pending: { id: number; date: string; type: string }[];
@@ -223,4 +225,27 @@ export function formSummary(runs: RunForm[]): string {
     );
   }
   return sections.join('\n\n');
+}
+
+/** Every run on its own line, so chat can answer about a specific date. */
+function runsTable(runs: RunForm[]): string {
+  const columns = FORM_METRICS.filter(({ key }) => runs.some((r) => r.overall[key] !== undefined));
+  const header = ['date', 'type', 'miles', 'running_minutes', ...columns.map((c) => `${c.key}_${c.unit}`)];
+  const rows = runs.map((run) =>
+    [
+      run.date,
+      run.type,
+      run.miles.toFixed(1),
+      Math.round(run.runningMinutes),
+      ...columns.map((c) => format(run.overall[c.key], c.decimals)),
+    ].join(',')
+  );
+  return [header.join(','), ...rows].join('\n');
+}
+
+export function formChatContext(runs: RunForm[]): string {
+  const withForm = runs
+    .filter((run) => run.runningMinutes > 0)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  return `${formSummary(withForm)}\n\nEvery run, newest first:\n${runsTable(withForm)}`;
 }

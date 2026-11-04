@@ -1,7 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { createClient, type RedisClientType } from 'redis';
 import type { PlanWeek } from '@/lib/plan-generator';
-import type { FormStore } from '@/lib/form-trends';
+import type { FormChatMessage, FormStore } from '@/lib/form-trends';
 
 export interface PlanRecord {
   id: string;
@@ -195,24 +195,41 @@ export async function listAllPlansSummary(): Promise<PlanSummaryItem[]> {
 }
 
 const FORM_KEY = 'form:data';
+/** Kept apart from form:data, so a chat reply can't overwrite runs a refresh is saving. */
+const FORM_CHAT_KEY = 'form:chat';
 
-export async function getFormStore(): Promise<FormStore> {
-  const empty: FormStore = { runs: [], pending: [] };
+async function getJson<T>(key: string): Promise<T | null> {
   const upstash = getUpstashRedis();
-  if (upstash) return (await upstash.get<FormStore>(FORM_KEY)) ?? empty;
+  if (upstash) return upstash.get<T>(key);
   const client = await getNodeRedis();
-  const raw = await client?.get(FORM_KEY);
-  return raw ? (JSON.parse(raw) as FormStore) : empty;
+  const raw = await client?.get(key);
+  return raw ? (JSON.parse(raw) as T) : null;
 }
 
-export async function setFormStore(data: FormStore): Promise<void> {
+async function setJson(key: string, value: unknown): Promise<void> {
   const upstash = getUpstashRedis();
   if (upstash) {
-    await upstash.set(FORM_KEY, data, { ex: TTL_SEC });
+    await upstash.set(key, value, { ex: TTL_SEC });
     return;
   }
   const client = await getNodeRedis();
-  await client?.set(FORM_KEY, JSON.stringify(data), { EX: TTL_SEC });
+  await client?.set(key, JSON.stringify(value), { EX: TTL_SEC });
+}
+
+export async function getFormStore(): Promise<FormStore> {
+  return (await getJson<FormStore>(FORM_KEY)) ?? { runs: [], pending: [] };
+}
+
+export function setFormStore(data: FormStore): Promise<void> {
+  return setJson(FORM_KEY, data);
+}
+
+export async function getFormChat(): Promise<FormChatMessage[]> {
+  return (await getJson<FormChatMessage[]>(FORM_CHAT_KEY)) ?? [];
+}
+
+export function setFormChat(messages: FormChatMessage[]): Promise<void> {
+  return setJson(FORM_CHAT_KEY, messages);
 }
 
 /** Count an event under a key that expires ttlSec after the first event. */

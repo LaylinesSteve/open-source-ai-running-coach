@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { hasFormAccess } from '@/lib/auth';
-import { reviewForm } from '@/lib/form-review';
+import { reviewForm } from '@/lib/form-ai';
 import { getFormStore, setFormStore } from '@/lib/store';
 
 export const maxDuration = 60;
