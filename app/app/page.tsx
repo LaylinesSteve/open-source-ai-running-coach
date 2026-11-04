@@ -1,21 +1,46 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import LandingWeeklySection from '@/app/components/LandingWeeklySection';
 
 const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left right left right B A
 
+const TOOLS: {
+  title: string;
+  badge?: string;
+  body: string;
+  note?: string;
+  link?: { label: string; href: string };
+  secondary?: { label: string; href: string };
+}[] = [
+  {
+    title: 'Training plan',
+    body: 'A plan built from your goal, your race date and your Strava runs, with a coach you can ask anything.',
+    note: 'Free · Takes under a minute',
+    link: { label: 'Create my plan', href: '/app/form' },
+    secondary: { label: 'View a sample plan', href: '/training-plan.html' },
+  },
+  {
+    title: 'Weekly recap',
+    body: 'Your mileage, pace and elevation for the week, straight from Strava.',
+    note: 'Free · Connect Strava',
+    link: { label: 'See my week', href: '/app/weekly' },
+  },
+  {
+    title: 'Running form analysis',
+    badge: 'Coming soon',
+    body: 'See how your cadence, ground contact time and stride change at the same pace, using your Garmin data, then ask AI what to work on.',
+  },
+];
+
 export default function HomePage() {
-  const router = useRouter();
   const [konamiIndex, setKonamiIndex] = useState(0);
   const [konamiFired, setKonamiFired] = useState(false);
   const [eggClicks, setEggClicks] = useState(0);
   const [egg2Revealed, setEgg2Revealed] = useState(false);
   const [visible, setVisible] = useState<Record<string, boolean>>({ hero: true });
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
-
-  const goToForm = () => router.push('/app/form');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -109,15 +134,12 @@ export default function HomePage() {
         .stagger-5 { animation-delay: 0.5s; }
         .egg-word { cursor: pointer; user-select: none; }
         .egg-word:hover { color: #e85d04; }
-        .landing-sample-link {
-          color: #737373;
-          border-color: #262626;
-          background: transparent;
+        .landing-tool-card {
+          transition: border-color 0.2s, background 0.2s;
         }
-        .landing-sample-link:hover {
-          color: #e85d04;
-          border-color: #e85d04;
-          background: rgba(232, 93, 4, 0.08);
+        .landing-tool-card:hover {
+          border-color: rgba(232, 93, 4, 0.55);
+          background: rgba(255, 255, 255, 0.05);
         }
         .landing-hero-github-link {
           color: #e85d04;
@@ -216,64 +238,88 @@ export default function HomePage() {
             >
               A free running coach powered by Strava and AI. Personalized plans from your goal, your date, and your runs—open source for the running community.
             </p>
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 16,
-                opacity: visible.hero ? 1 : 0,
-                transform: visible.hero ? 'translateY(0)' : 'translateY(16px)',
-                transition: 'opacity 0.7s ease 0.45s, transform 0.7s ease 0.45s',
-              }}
-            >
-              <button
-                type="button"
-                onClick={goToForm}
-                className="landing-cta"
+          </div>
+
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 1,
+              width: '100%',
+              maxWidth: 1000,
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 270px), 1fr))',
+              gap: 16,
+              textAlign: 'left',
+            }}
+          >
+            {TOOLS.map((tool, i) => (
+              <div
+                key={tool.title}
+                className={tool.link ? 'landing-tool-card' : undefined}
                 style={{
-                  padding: '14px 32px',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  color: '#fff',
-                  background: '#e85d04',
-                  border: 'none',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  letterSpacing: '0.15em',
-                  textTransform: 'uppercase',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  padding: 24,
+                  background: 'rgba(255,255,255,0.03)',
+                  borderRadius: 16,
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  opacity: visible.hero ? 1 : 0,
+                  transform: visible.hero ? 'translateY(0)' : 'translateY(16px)',
+                  transition: `opacity 0.7s ease ${0.45 + i * 0.08}s, transform 0.7s ease ${0.45 + i * 0.08}s, border-color 0.2s, background 0.2s`,
                 }}
               >
-                Create my training plan
-              </button>
-              <a
-                href="/training-plan.html"
-                className="landing-sample-link"
-                style={{
-                  fontSize: '0.85rem',
-                  textDecoration: 'none',
-                  letterSpacing: '0.05em',
-                  border: '1px solid',
-                  padding: '10px 20px',
-                  borderRadius: 6,
-                  transition: 'color 0.2s, border-color 0.2s, background 0.2s',
-                }}
-              >
-                View a sample plan
-              </a>
-            </div>
-            <p
-              style={{
-                marginTop: 28,
-                fontSize: '0.75rem',
-                color: '#525252',
-                letterSpacing: '0.1em',
-                opacity: visible.hero ? 1 : 0,
-                transition: 'opacity 0.7s ease 0.55s',
-              }}
-            >
-              Free · Takes under a minute · Connect Strava to personalize
-            </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0, color: '#f5f5f5' }}>{tool.title}</h2>
+                  {tool.badge && (
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        color: '#a3a3a3',
+                        border: '1px solid #404040',
+                        borderRadius: 999,
+                        padding: '2px 8px',
+                      }}
+                    >
+                      {tool.badge}
+                    </span>
+                  )}
+                </div>
+                <p style={{ fontSize: '0.95rem', color: '#a3a3a3', lineHeight: 1.55, margin: '0 0 12px' }}>{tool.body}</p>
+                {tool.note && (
+                  <p style={{ fontSize: '0.8rem', color: '#737373', margin: '0 0 16px' }}>{tool.note}</p>
+                )}
+                {tool.link && (
+                  <div style={{ marginTop: 'auto', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
+                    <Link
+                      href={tool.link.href}
+                      className="landing-cta"
+                      style={{
+                        padding: '11px 18px',
+                        fontSize: '0.85rem',
+                        fontWeight: 600,
+                        color: '#fff',
+                        background: '#e85d04',
+                        borderRadius: 6,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      {tool.link.label}
+                    </Link>
+                    {tool.secondary && (
+                      <a
+                        href={tool.secondary.href}
+                        style={{ fontSize: '0.85rem', color: '#a3a3a3', textUnderlineOffset: 3 }}
+                      >
+                        {tool.secondary.label}
+                      </a>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
             {/* Easter egg 2: click "run" twice */}
             <p
               style={{

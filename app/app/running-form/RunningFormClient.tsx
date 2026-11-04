@@ -49,6 +49,12 @@ const button: CSSProperties = {
   fontFamily: 'inherit',
   cursor: 'pointer',
 };
+const secondaryButton: CSSProperties = {
+  ...button,
+  background: 'transparent',
+  border: '1px solid #525252',
+  color: '#f5f5f5',
+};
 const control: CSSProperties = {
   padding: '0.5rem 0.6rem',
   borderRadius: 8,
@@ -195,13 +201,21 @@ export default function RunningFormClient({
     setReviewing(false);
   }
 
-  async function copyLink() {
-    const link = new URL(linkPath, window.location.origin).href;
+  async function share() {
+    const url = new URL(linkPath, window.location.origin).href;
+    const warning = 'Anyone with this link can see this page and use the chat, but not your plans.';
     try {
-      await navigator.clipboard.writeText(link);
-      setLinkNote('Copied.');
-    } catch {
-      setLinkNote(link);
+      // Phones get their share sheet. Computers usually don't have one, so the link is copied.
+      if (navigator.share) {
+        await navigator.share({ title: 'Running form', url });
+        setLinkNote(warning);
+      } else {
+        await navigator.clipboard.writeText(url);
+        setLinkNote(`Link copied. ${warning}`);
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setLinkNote(`${url} ${warning}`);
     }
   }
 
@@ -235,11 +249,19 @@ export default function RunningFormClient({
           <button type="button" onClick={analyze} disabled={syncing} style={{ ...button, opacity: syncing ? 0.6 : 1 }}>
             {syncing ? 'Working…' : runs.length ? 'Check for new runs' : 'Analyze my runs'}
           </button>
+          <button type="button" onClick={share} style={secondaryButton}>
+            Share
+          </button>
           <p role="status" style={muted}>
             {syncNote ||
               (updatedAt ? `Last updated ${shortDate(updatedAt.slice(0, 10))}` : '')}
           </p>
         </div>
+        {linkNote && (
+          <p role="status" style={{ ...muted, marginTop: '0.75rem', overflowWrap: 'anywhere' }}>
+            {linkNote}
+          </p>
+        )}
 
         {runs.length === 0 ? (
           <div style={{ ...card, marginTop: '1.5rem' }}>
@@ -468,20 +490,6 @@ export default function RunningFormClient({
             <FormChat initialMessages={initialChat} />
           </>
         )}
-
-        <h2 style={heading}>Private link</h2>
-        <p style={{ ...muted, marginBottom: '0.75rem' }}>
-          Opens this page without the passkey, for anyone who has it, so don&apos;t share it. It
-          doesn&apos;t open your plans. Changing your passkey turns it off.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.75rem' }}>
-          <button type="button" onClick={copyLink} style={button}>
-            Copy link
-          </button>
-          <p role="status" style={{ ...muted, overflowWrap: 'anywhere' }}>
-            {linkNote}
-          </p>
-        </div>
       </div>
     </div>
   );
