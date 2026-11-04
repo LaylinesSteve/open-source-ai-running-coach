@@ -19,7 +19,7 @@ const INK = '#f5f5f5';
 const MUTED = '#a3a3a3';
 const DISPLAY_FONT = "'Bebas Neue', sans-serif";
 const BASELINE = '1px solid rgba(255,255,255,0.14)';
-const PLOT_HEIGHT = 128;
+const PLOT_HEIGHT = 150;
 const LABEL_SPACE = 20;
 const SHARE_PLOT_HEIGHT = 104;
 const SHARE_STAGE_HEIGHT = 344;
@@ -36,7 +36,6 @@ function Panel({
   color,
   glow,
   summary,
-  kicker,
   value,
   unit,
   note,
@@ -46,7 +45,6 @@ function Panel({
   color: string;
   glow: string;
   summary: string;
-  kicker: string;
   value: string;
   unit: string;
   note: string;
@@ -63,10 +61,9 @@ function Panel({
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      <p style={{ ...smallText, margin: 0, letterSpacing: '0.14em', textTransform: 'uppercase' }}>{kicker}</p>
       <p
         style={{
-          margin: '10px 0 0',
+          margin: 0,
           fontFamily: DISPLAY_FONT,
           fontSize: '3.25rem',
           lineHeight: 1,
@@ -229,10 +226,9 @@ export function PlanVisual() {
       color={ORANGE}
       glow="rgba(232, 93, 4, 0.2)"
       summary="Sample 50K plan: long runs build over 11 weeks from 6 to 18 miles, then taper for two weeks before race day."
-      kicker="Sample plan"
       value={String(bars.length)}
       unit="weeks"
-      note="Long runs building to a 50K"
+      note="Sample plan: long runs building to a 50K"
       chart={<Bars bars={bars} color={ORANGE} />}
       stats={[
         { label: 'Peak week', value: '28', unit: 'mi' },
@@ -494,10 +490,9 @@ export function FormVisual() {
       color={BLUE}
       glow="rgba(57, 135, 229, 0.18)"
       summary={`Sample data: ground contact time at the same pace falls from ${first} to ${latest} milliseconds over 12 weeks.`}
-      kicker="Sample data"
       value={String(latest)}
       unit="ms"
-      note={`Ground contact at 9:00/mi, ▼ ${drop}% in 12 weeks`}
+      note={`Sample: ground contact at 9:00/mi, ▼ ${drop}% in 12 weeks`}
       chart={<TrendLine values={SAMPLE_GROUND_CONTACT} unit="ms" color={BLUE} ticks={['12 weeks ago', 'Now']} />}
       stats={[
         { label: 'Cadence', value: '172', unit: 'spm' },

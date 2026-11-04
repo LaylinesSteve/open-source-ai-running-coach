@@ -158,12 +158,12 @@ export default function HomePage() {
           .landing-tools {
             max-width: 1240px;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            grid-template-rows: auto 1fr;
+            grid-template-rows: auto auto 1fr;
             row-gap: 0;
           }
           .landing-tool {
             display: grid;
-            grid-row: span 2;
+            grid-row: span 3;
             grid-template-rows: subgrid;
           }
         }
@@ -287,9 +287,20 @@ export default function HomePage() {
                   transition: `opacity 0.7s ease ${0.45 + i * 0.08}s, transform 0.7s ease ${0.45 + i * 0.08}s, border-color 0.2s, background 0.2s`,
                 }}
               >
+                <h2
+                  style={{
+                    fontSize: '1.45rem',
+                    fontWeight: 700,
+                    margin: 0,
+                    padding: '20px 24px',
+                    color: '#f5f5f5',
+                    borderBottom: '1px solid rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {tool.title}
+                </h2>
                 {tool.visual}
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '24px 24px 26px' }}>
-                  <h2 style={{ fontSize: '1.45rem', fontWeight: 700, margin: '0 0 10px', color: '#f5f5f5' }}>{tool.title}</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '22px 24px 26px' }}>
                   <p style={{ fontSize: '1rem', color: '#a3a3a3', lineHeight: 1.55, margin: '0 0 12px' }}>{tool.body}</p>
                   {tool.note && (
                     <p style={{ fontSize: '0.85rem', color: '#737373', margin: '0 0 18px' }}>{tool.note}</p>
