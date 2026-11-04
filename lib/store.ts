@@ -192,3 +192,18 @@ export async function listAllPlansSummary(): Promise<PlanSummaryItem[]> {
   summaries.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return summaries;
 }
+
+/** Count an event under a key that expires ttlSec after the first event. */
+export async function countAttempt(key: string, ttlSec: number): Promise<number> {
+  const upstash = getUpstashRedis();
+  if (upstash) {
+    const count = await upstash.incr(key);
+    if (count === 1) await upstash.expire(key, ttlSec);
+    return count;
+  }
+  const client = await getNodeRedis();
+  if (!client) return 0;
+  const count = await client.incr(key);
+  if (count === 1) await client.expire(key, ttlSec);
+  return count;
+}

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 import type { CoachChatMessage } from '@/lib/store';
 import { chatWithCoach, MAX_CHAT_HISTORY_STORED } from '@/lib/ai-plan';
+import { getGarminContext } from '@/lib/garmin';
 import { generatePlanWeeks } from '@/lib/plan-generator';
 
 export async function POST(
@@ -9,6 +11,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: planId } = await params;
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
@@ -51,7 +55,15 @@ export async function POST(
   }));
 
   try {
-    const reply = await chatWithCoach(plan, weeksData, plan.runLog ?? [], prior, message);
+    const garminContext = await getGarminContext(planId);
+    const reply = await chatWithCoach(
+      plan,
+      weeksData,
+      plan.runLog ?? [],
+      prior,
+      message,
+      garminContext
+    );
     const at = new Date().toISOString();
     const userEntry: CoachChatMessage = { role: 'user', content: message, at };
     const assistantEntry: CoachChatMessage = { role: 'assistant', content: reply, at };

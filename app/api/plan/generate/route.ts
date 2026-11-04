@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 import { generatePlanWeeks, planWeeksToHtml } from '@/lib/plan-generator';
 
 export async function POST(request: NextRequest) {
@@ -9,6 +10,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'planId required' }, { status: 400 });
   }
 
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });

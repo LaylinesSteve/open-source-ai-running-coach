@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const denied = await requirePlanAccess(id);
+  if (denied) return denied;
   const plan = await getPlan(id);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });

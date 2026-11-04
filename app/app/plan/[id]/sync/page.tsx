@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getPlan } from '@/lib/store';
+import { canAccessPlan } from '@/lib/auth';
 import Link from 'next/link';
 import { stravaActivityLabel } from '@/lib/strava';
 import SyncButton from '../SyncButton';
@@ -20,6 +21,9 @@ export default async function SyncPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!(await canAccessPlan(id))) {
+    redirect(`/app/unlock?next=${encodeURIComponent(`/app/plan/${id}/sync`)}`);
+  }
   const plan = await getPlan(id);
   if (!plan) redirect('/app/form');
 

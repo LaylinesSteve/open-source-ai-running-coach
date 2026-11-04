@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getPlan } from '@/lib/store';
+import { canAccessPlan } from '@/lib/auth';
 
 /** Per-plan data must not be statically cached (multiple plans, fresh Strava log). */
 export const dynamic = 'force-dynamic';
@@ -48,6 +49,9 @@ export default async function PlanPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  if (!(await canAccessPlan(id))) {
+    redirect(`/app/unlock?next=${encodeURIComponent(`/app/plan/${id}`)}`);
+  }
   const plan = await getPlan(id);
   if (!plan) {
     redirect('/app/form');

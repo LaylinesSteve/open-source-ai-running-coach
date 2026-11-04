@@ -7,6 +7,7 @@ A Strava + AI running coach that builds **personalized training plans for any go
 - **`/`** (and **`/training-plan.html`**) — Sample static training plan you can view before signing up.
 - **`/app`** — Same landing as `/`.
 - **`/app/form`** — Form: your goal (race name or distance), race date, optional link, optional "Connect Strava". Submit → create plan → redirect to Strava (if checked) or to your plan page.
+- **`/app/admin/plans`** — All plans, behind `PASSKEY`.
 - **`/app/plan/[id]`** — Your generated plan (shareable link). If you connected Strava, the AI uses your running history to personalize the plan for your current fitness; otherwise it’s built from your goal and date. Works for any distance and experience level.
 
 ## Environment variables
@@ -24,8 +25,21 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.5-flash`). Override if the default is deprecated (e.g. `gemini-3-flash-preview`). |
 | `COOKIE_SECRET` | No | Optional; for cookie signing. If unset, `PASSKEY` is used. |
+| `GARMIN_PERSONAL_API_KEY` | No | Your [Garmin Connect personal API key](https://connect.garmin.com/app/settings/personalApiToken). See [Garmin data](#garmin-data). |
+| `GARMIN_PLAN_IDS` | No | Comma-separated plan ids that get Garmin data. These plans need `PASSKEY` to open. |
+| `GARMIN_TIME_ZONE` | No | IANA time zone so "today" matches your watch, e.g. `America/New_York`. Default `UTC`. |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | No | If set, footer shows this contact email. Otherwise shows "Open an issue in the project repository." |
 | `NEXT_PUBLIC_COPYRIGHT` | No | If set, footer shows this copyright line (e.g. "© 2026 Your Name. All rights reserved."). |
+
+## Garmin data
+
+The coach can read your own Garmin data: the last 14 days of activities, sleep, HRV, Body Battery, stress, daily summaries and heart rate zones. It uses this in coach chat, progress updates and plan revisions.
+
+1. Create a key at [Garmin Connect → Personal API tokens](https://connect.garmin.com/app/settings/personalApiToken).
+2. Set `GARMIN_PERSONAL_API_KEY` to that key, and `GARMIN_PLAN_IDS` to your plan id (the id in `/app/plan/<id>`).
+3. Redeploy if you changed the variables on Vercel, then open your plan and enter `PASSKEY` at `/app/unlock`.
+
+A Garmin personal key is for your own data, so only plans in `GARMIN_PLAN_IDS` get it, and those plans stop being open by link. Known GPS, free-text and account fields are dropped by field name, and the rest is sent to Gemini with each request. Raw Garmin data isn't stored, though coach replies that mention it are saved with the plan. Garmin keys expire after 30 days to one year, so renew yours when Garmin emails you.
 
 ## What is KV? Storage (Redis)
 

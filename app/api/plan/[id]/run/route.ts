@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 import type { LoggedRun } from '@/lib/store';
 import { getPlanWeek1Monday, weekNumberFromPlanStart } from '@/lib/training-week-calendar';
 
@@ -14,6 +15,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: planId } = await params;
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
@@ -68,6 +71,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: planId } = await params;
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });

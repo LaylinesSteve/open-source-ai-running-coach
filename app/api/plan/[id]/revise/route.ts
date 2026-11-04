@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 import { getAccessTokenForPlan } from '@/lib/ai-plan';
 import { baselineFitnessFromRunLog, buildStravaSummary } from '@/lib/ai-plan';
+import { getGarminContext } from '@/lib/garmin';
 import { fetchStravaActivities } from '@/lib/strava';
 import { revisePlanWithAI } from '@/lib/ai-plan';
 import { planWeeksToHtml } from '@/lib/plan-generator';
@@ -11,6 +13,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: planId } = await params;
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
@@ -47,12 +51,14 @@ export async function POST(
   try {
     const baselineBlock = baselineFitnessFromRunLog(plan.runLog ?? []);
     const stravaForRevise = [stravaSummary, baselineBlock].filter(Boolean).join('\n\n');
+    const garminContext = await getGarminContext(planId);
 
     const { weeks, coachSummary } = await revisePlanWithAI(
       plan,
       stravaForRevise,
       currentWeeks,
-      userRequest
+      userRequest,
+      garminContext
     );
     const distance = plan.distance || 'Marathon';
     const html = planWeeksToHtml(

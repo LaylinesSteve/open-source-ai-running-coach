@@ -1,9 +1,15 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
+import { hasAccess } from '@/lib/auth';
 import { listAllPlansSummary } from '@/lib/store';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPlansPage() {
+  if (!(await hasAccess())) {
+    redirect(`/app/unlock?next=${encodeURIComponent('/app/admin/plans')}`);
+  }
+
   let plans: Awaited<ReturnType<typeof listAllPlansSummary>> = [];
   let error = '';
   try {

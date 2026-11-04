@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
+import { requirePlanAccess } from '@/lib/auth';
 import { adaptPlanWithAI } from '@/lib/ai-plan';
+import { getGarminContext } from '@/lib/garmin';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: planId } = await params;
+  const denied = await requirePlanAccess(planId);
+  if (denied) return denied;
   const plan = await getPlan(planId);
   if (!plan) {
     return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
@@ -21,7 +25,13 @@ export async function POST(
 
   try {
     const runLog = plan.runLog ?? [];
-    const { coachNote, suggestedWeeks } = await adaptPlanWithAI(plan, plan.weeksData, runLog);
+    const garminContext = await getGarminContext(planId);
+    const { coachNote, suggestedWeeks } = await adaptPlanWithAI(
+      plan,
+      plan.weeksData,
+      runLog,
+      garminContext
+    );
 
     await updatePlan(planId, {
       adaptationNote: coachNote,

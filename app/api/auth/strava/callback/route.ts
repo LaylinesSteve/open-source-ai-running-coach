@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { canAccessPlan } from '@/lib/auth';
 import { exchangeStravaCode } from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
 import { parseWeeklyOAuthState, updateWeeklySession } from '@/lib/weekly-session';
@@ -23,6 +24,12 @@ export async function GET(request: NextRequest) {
 
   if (!code || !state) {
     return NextResponse.redirect(new URL(weeklyId ? '/app/weekly' : '/app/form', request.url));
+  }
+
+  if (!weeklyId && !(await canAccessPlan(state))) {
+    const unlockUrl = new URL('/app/unlock', request.url);
+    unlockUrl.searchParams.set('next', `/app/plan/${state}`);
+    return NextResponse.redirect(unlockUrl);
   }
 
   const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin).replace(/\/$/, '');
