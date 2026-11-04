@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
 import { FormVisual, PlanVisual, WeekVisual } from '@/app/components/ToolCardVisuals';
+import { SKINS } from '@/lib/weekly-skins';
 
 const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left right left right B A
 
@@ -26,7 +27,7 @@ const TOOLS: {
   {
     title: 'Weekly recap',
     visual: <WeekVisual />,
-    body: 'Your mileage, pace and elevation for the week, straight from Strava.',
+    body: `Turn your Strava week into a card worth sharing. Pick from ${SKINS.length} visual themes, save the image and post it.`,
     note: 'Free · Connect Strava',
     link: { label: 'See my week', href: '/app/weekly' },
   },
@@ -148,10 +149,22 @@ export default function HomePage() {
           gap: 20px;
           text-align: left;
         }
+        .landing-tool {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
         @media (min-width: 960px) {
           .landing-tools {
             max-width: 1240px;
             grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-rows: auto 1fr;
+            row-gap: 0;
+          }
+          .landing-tool {
+            display: grid;
+            grid-row: span 2;
+            grid-template-rows: subgrid;
           }
         }
         .landing-tool-card {
@@ -264,11 +277,8 @@ export default function HomePage() {
             {TOOLS.map((tool, i) => (
               <div
                 key={tool.title}
-                className={tool.link ? 'landing-tool-card' : undefined}
+                className={`landing-tool${tool.link ? ' landing-tool-card' : ''}`}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  overflow: 'hidden',
                   background: 'rgba(255,255,255,0.03)',
                   borderRadius: 20,
                   border: '1px solid rgba(255,255,255,0.08)',

@@ -7,6 +7,7 @@ import {
   CONTROLS,
   DEFAULT_SKIN_ID,
   GLASS_WHITE,
+  SKIN_DECO_KEYFRAMES,
   SKIN_FONT_HREF,
   SKIN_PREVIEW_STORAGE_KEY,
   SKINS,
@@ -459,19 +460,7 @@ export default function WeeklyStravaRecap({
         @keyframes weeklySpinSlow {
           to { transform: translate(-50%, -50%) rotate(360deg); }
         }
-        @keyframes weeklyTwinkle {
-          0%, 100% { opacity: 0.15; transform: scale(0.7); }
-          50% { opacity: 1; transform: scale(1.1); }
-        }
-        @keyframes weeklyFloatPiece {
-          0% { transform: translateY(0) rotate(0deg); }
-          50% { transform: translateY(-10px) rotate(180deg); }
-          100% { transform: translateY(0) rotate(360deg); }
-        }
-        @keyframes weeklySheen {
-          0% { transform: translateX(-120%) skewX(-18deg); }
-          100% { transform: translateX(220%) skewX(-18deg); }
-        }
+        ${SKIN_DECO_KEYFRAMES}
         .weekly-connect-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }
         .weekly-connect-btn:active { transform: translateY(0); }
         .weekly-bar-btn { background: none; border: none; padding: 0; cursor: default; }

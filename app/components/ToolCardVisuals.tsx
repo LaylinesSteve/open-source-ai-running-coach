@@ -1,9 +1,16 @@
+'use client';
+
 /**
  * Sample previews for the home page tool cards. They never show a real runner's data:
  * the plan is the sample plan the card links to, and the week is the demo week from weekly-data.
  */
-import type { ReactNode } from 'react';
+import dynamic from 'next/dynamic';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { DEMO_WEEKS, type WeeklySessionWeek } from '@/lib/weekly-data';
+import { controlStyle, getSkin, SKIN_DECO_KEYFRAMES, SKIN_FONT_HREF, type SkinId } from '@/lib/weekly-skins';
+
+/** Client only: browsers can round its random positions differently from the server. */
+const WeeklySkinDeco = dynamic(() => import('@/app/components/WeeklySkinDeco'), { ssr: false });
 
 const ORANGE = '#e85d04';
 const BLUE = '#3987e5';
@@ -12,10 +19,13 @@ const INK = '#f5f5f5';
 const MUTED = '#a3a3a3';
 const DISPLAY_FONT = "'Bebas Neue', sans-serif";
 const BASELINE = '1px solid rgba(255,255,255,0.14)';
-const PLOT_HEIGHT = 112;
+const PLOT_HEIGHT = 128;
 const LABEL_SPACE = 20;
+const SHARE_PLOT_HEIGHT = 104;
+const SHARE_STAGE_HEIGHT = 344;
+const THEME_MS = 3000;
+const SHOWCASE_THEMES: SkinId[] = ['confetti', 'chromepop', 'glamor', 'mtv', 'americana', 'nps'];
 const KM_TO_MI = 0.621371;
-const M_TO_FT = 3.28084;
 
 const smallText = { fontSize: '0.72rem', color: MUTED, fontVariantNumeric: 'lining-nums' } as const;
 
@@ -237,37 +247,238 @@ function weekTotal(week: WeeklySessionWeek, key: 'dist' | 'time' | 'elev'): numb
   return week.sessions.reduce((total, session) => total + session[key], 0);
 }
 
-export function WeekVisual() {
-  const week = DEMO_WEEKS[DEMO_WEEKS.length - 1];
-  const previous = DEMO_WEEKS[DEMO_WEEKS.length - 2];
-  const miles = weekTotal(week, 'dist') * KM_TO_MI;
-  const seconds = weekTotal(week, 'time');
-  const drop = Math.round((1 - weekTotal(week, 'dist') / weekTotal(previous, 'dist')) * 100);
-  const pace = seconds / miles;
-  const longest = Math.max(...week.sessions.map((session) => session.dist));
-  const bars: Bar[] = week.sessions.map((session) => ({
-    id: session.day,
-    value: session.dist * KM_TO_MI,
-    label: session.dist === longest ? (session.dist * KM_TO_MI).toFixed(1) : undefined,
-    tick: session.day,
-    strong: session.dist === longest,
-  }));
+const WEEK = DEMO_WEEKS[DEMO_WEEKS.length - 1];
+const WEEK_MILES = weekTotal(WEEK, 'dist') * KM_TO_MI;
+const WEEK_DROP = Math.round((1 - weekTotal(WEEK, 'dist') / weekTotal(DEMO_WEEKS[DEMO_WEEKS.length - 2], 'dist')) * 100);
+const WEEK_LONGEST_KM = Math.max(...WEEK.sessions.map((session) => session.dist));
+
+/** One week of the weekly recap share card in a theme, without the controls. */
+function ShareCard({ skinId, motion, onMotionEnd }: { skinId: SkinId; motion?: string; onMotionEnd?: () => void }) {
+  const sharp = skinId === 'glamor';
+  const heading = {
+    margin: 0,
+    fontFamily: 'var(--font-mono)',
+    fontSize: 11,
+    letterSpacing: '0.18em',
+    textTransform: 'uppercase',
+    color: 'var(--ink-2)',
+  } as const;
+  const truncated = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const;
   return (
-    <Panel
-      color={ORANGE}
-      glow="rgba(232, 93, 4, 0.2)"
-      summary={`Sample week: ${miles.toFixed(1)} miles, down ${drop}% from the week before, with the longest run on Saturday.`}
-      kicker="Sample week"
-      value={miles.toFixed(1)}
-      unit="mi"
-      note={`▼ ${drop}% vs last week`}
-      chart={<Bars bars={bars} color={ORANGE} />}
-      stats={[
-        { label: 'Avg pace', value: `${Math.floor(pace / 60)}:${String(Math.round(pace % 60)).padStart(2, '0')}`, unit: '/mi' },
-        { label: 'Time', value: `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m` },
-        { label: 'Elevation', value: Math.round(weekTotal(week, 'elev') * M_TO_FT).toLocaleString('en-US'), unit: 'ft' },
-      ]}
-    />
+    <div
+      className={motion}
+      onAnimationEnd={onMotionEnd}
+      style={{
+        ...(getSkin(skinId).vars as CSSProperties),
+        position: 'absolute',
+        inset: 0,
+        overflow: 'hidden',
+        containerType: 'inline-size',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--card)',
+        color: 'var(--ink)',
+      }}
+    >
+      <div style={{ height: 4, flexShrink: 0, background: 'var(--strip)' }} />
+      <WeeklySkinDeco skinId={skinId} />
+      <div style={{ position: 'relative', flex: 1, display: 'flex', flexDirection: 'column', padding: '18px 22px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+            <span
+              style={{
+                width: 44,
+                height: 44,
+                flexShrink: 0,
+                display: 'grid',
+                placeItems: 'center',
+                borderRadius: sharp ? 0 : '50%',
+                border: '1.5px solid var(--accent)',
+                background: 'var(--tile)',
+                fontFamily: 'var(--font-display)',
+                fontSize: 15,
+                fontWeight: 800,
+              }}
+            >
+              MO
+            </span>
+            <div style={{ minWidth: 0 }}>
+              <p style={{ ...truncated, margin: 0, fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 700 }}>
+                Maya Okonkwo
+              </p>
+              <p style={{ ...heading, ...truncated, marginTop: 2, fontSize: 10, letterSpacing: '0.1em' }}>
+                {WEEK.range.replace(/, \d{4}$/, '')}
+              </p>
+            </div>
+          </div>
+          <span
+            className="tool-theme-chip"
+            style={{
+              flexShrink: 0,
+              padding: '6px 10px',
+              background: 'var(--chip-bg)',
+              color: 'var(--accent-hi)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              whiteSpace: 'nowrap',
+              ...controlStyle(skinId, 1),
+            }}
+          >
+            Weekly recap
+          </span>
+        </div>
+
+        <p style={{ ...heading, marginTop: 16 }}>Total distance</p>
+        <p style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '2px 0 0', fontFamily: 'var(--font-display)' }}>
+          <span style={{ fontSize: 'min(60px, 16cqw)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em' }}>
+            {WEEK_MILES.toFixed(1)}
+          </span>
+          <span style={{ fontSize: 24, fontWeight: 700, color: 'var(--ink-2)' }}>mi</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: 'var(--down)' }}>
+            ▼ {WEEK_DROP}%
+          </span>
+        </p>
+
+        <div style={{ marginTop: 'auto', paddingTop: 12 }}>
+          <p style={heading}>Daily distance</p>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-end',
+              gap: 8,
+              height: SHARE_PLOT_HEIGHT + LABEL_SPACE,
+              borderBottom: '1px solid var(--grid)',
+            }}
+          >
+            {WEEK.sessions.map((session) => (
+              <div
+                key={session.day}
+                style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}
+              >
+                {session.dist > 0 && (
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: 'var(--ink-2)' }}>
+                    {(session.dist * KM_TO_MI).toFixed(1)}
+                  </span>
+                )}
+                <div
+                  style={{
+                    width: '100%',
+                    height: session.dist > 0 ? (session.dist / WEEK_LONGEST_KM) * SHARE_PLOT_HEIGHT : 3,
+                    borderRadius: sharp ? 0 : '5px 5px 0 0',
+                    background:
+                      session.dist === 0
+                        ? 'var(--grid)'
+                        : skinId === 'mtv' || skinId === 'chromepop'
+                          ? 'var(--bar-active)'
+                          : 'var(--bar)',
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            {WEEK.sessions.map((session) => (
+              <span
+                key={session.day}
+                style={{
+                  flex: '1 1 0',
+                  textAlign: 'center',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--ink-2)',
+                }}
+              >
+                {session.day}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Scrolls through a mix of the themes, alternating light and dark. */
+export function WeekVisual() {
+  const [index, setIndex] = useState(0);
+  const [leaving, setLeaving] = useState<SkinId | null>(null);
+  const [playing, setPlaying] = useState(true);
+  const [hovering, setHovering] = useState(false);
+  const current = SHOWCASE_THEMES[index];
+  const skin = getSkin(current);
+
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) setPlaying(false);
+  }, []);
+
+  useEffect(() => {
+    if (!playing || hovering) return;
+    const timer = setTimeout(() => {
+      setLeaving(SHOWCASE_THEMES[index]);
+      setIndex((index + 1) % SHOWCASE_THEMES.length);
+    }, THEME_MS);
+    return () => clearTimeout(timer);
+  }, [index, playing, hovering]);
+
+  return (
+    <div
+      onPointerEnter={(event) => setHovering(event.pointerType === 'mouse')}
+      onPointerLeave={() => setHovering(false)}
+      style={{ display: 'flex', flexDirection: 'column', background: SURFACE, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <link rel="stylesheet" href={SKIN_FONT_HREF} precedence="default" />
+      <style>{`
+        ${SKIN_DECO_KEYFRAMES}
+        @keyframes toolThemeIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes toolThemeOut { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+        .tool-theme-in { animation: toolThemeIn 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+        .tool-theme-out { animation: toolThemeOut 0.6s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+        @container (max-width: 340px) {
+          .tool-theme-chip { display: none; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .tool-theme-stage, .tool-theme-stage * { animation: none !important; }
+          .tool-theme-out { display: none; }
+        }
+      `}</style>
+      <div
+        role="img"
+        aria-label={`Sample share card in the ${skin.label} theme: ${WEEK_MILES.toFixed(1)} miles this week, down ${WEEK_DROP}% from last week, with daily distance bars.`}
+        className="tool-theme-stage"
+        style={{ position: 'relative', flex: 1, minHeight: SHARE_STAGE_HEIGHT, overflow: 'hidden' }}
+      >
+        {[leaving, current].map(
+          (skinId) =>
+            skinId && (
+              <ShareCard
+                key={skinId}
+                skinId={skinId}
+                motion={skinId === leaving ? 'tool-theme-out' : leaving ? 'tool-theme-in' : undefined}
+                onMotionEnd={skinId === leaving ? () => setLeaving(null) : undefined}
+              />
+            )
+        )}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '6px 12px 6px 22px' }}>
+        <span style={{ ...smallText, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem' }}>
+          <span aria-hidden style={{ width: 12, height: 12, borderRadius: '50%', background: skin.swatch }} />
+          {skin.label} theme · Sample
+        </span>
+        <button
+          type="button"
+          onClick={() => setPlaying(!playing)}
+          aria-label={playing ? 'Pause the theme preview' : 'Play the theme preview'}
+          style={{ ...smallText, padding: '6px 10px', fontSize: '0.8rem', background: 'none', border: 'none', cursor: 'pointer' }}
+        >
+          {playing ? 'Pause' : 'Play'}
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -429,5 +429,22 @@ export function controlStyle(skinId: SkinId, index: number): CSSProperties {
   return { borderRadius: cfg.radius };
 }
 
+/** Animations WeeklySkinDeco uses. Any page showing it needs these in a style tag. */
+export const SKIN_DECO_KEYFRAMES = `
+  @keyframes weeklyTwinkle {
+    0%, 100% { opacity: 0.15; transform: scale(0.7); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  @keyframes weeklyFloatPiece {
+    0% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-10px) rotate(180deg); }
+    100% { transform: translateY(0) rotate(360deg); }
+  }
+  @keyframes weeklySheen {
+    0% { transform: translateX(-120%) skewX(-18deg); }
+    100% { transform: translateX(220%) skewX(-18deg); }
+  }
+`;
+
 export const SKIN_FONT_HREF =
   'https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@500;600;700;800;900&family=Bitter:wght@500;700;800;900&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Jost:wght@400;500;600&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Nunito:wght@400;600;700;800&family=Orbitron:wght@500;700;800;900&family=Playfair+Display:ital,wght@0,500;0,700;0,900;1,600&family=Poppins:wght@400;500;600;700&family=Rye&family=Space+Mono:wght@400;700&family=Special+Elite&family=Teko:wght@400;500;600;700&display=swap';
