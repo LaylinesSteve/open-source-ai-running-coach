@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@upstash/redis": "^1.28.0",
+    "fflate": "^0.8.3",
+    "fit-file-parser": "^6.2.7",
     "html-to-image": "^1.11.13",
     "next": "^16.4.5",
     "react": "^19.3.1",

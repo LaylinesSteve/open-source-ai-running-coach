@@ -307,8 +307,7 @@ export async function revisePlanWithAI(
   plan: PlanRecord,
   stravaSummary: string,
   currentWeeks: PlanWeek[],
-  userRequest: string,
-  garminContext = ''
+  userRequest: string
 ): Promise<GeneratePlanResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
@@ -363,7 +362,7 @@ ${syncContext ? `${syncContext}\n\n` : ''}
 
 Recent training (Strava):
 ${stravaSummary}
-${garminContext ? `\n${garminContext}\n` : ''}
+
 Current plan (JSON):
 ${currentPlanJson}
 
@@ -440,8 +439,7 @@ export interface AdaptPlanResult {
 export function buildAdaptationContext(
   plan: PlanRecord,
   weeksData: PlanWeek[],
-  runLog: LoggedRun[],
-  garminContext = ''
+  runLog: LoggedRun[]
 ): string {
   const raceDate = new Date(plan.raceDate + 'T12:00:00');
   const raceDateStr = raceDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -529,10 +527,6 @@ export function buildAdaptationContext(
     lines.push(`${plan.syncResult.summary} (last sync: ${plan.lastSyncAt}).`);
   }
 
-  if (garminContext) {
-    lines.push('', garminContext);
-  }
-
   return lines.filter((s) => s !== undefined).join('\n');
 }
 
@@ -540,13 +534,12 @@ export function buildAdaptationContext(
 export async function adaptPlanWithAI(
   plan: PlanRecord,
   weeksData: PlanWeek[],
-  runLog: LoggedRun[],
-  garminContext = ''
+  runLog: LoggedRun[]
 ): Promise<AdaptPlanResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
-  const context = buildAdaptationContext(plan, weeksData, runLog, garminContext);
+  const context = buildAdaptationContext(plan, weeksData, runLog);
   const distance = plan.distance || 'Marathon';
   const numWeeks = weeksData.length;
 
@@ -633,13 +626,12 @@ export async function chatWithCoach(
   weeksData: PlanWeek[],
   runLog: LoggedRun[],
   priorMessages: { role: 'user' | 'assistant'; content: string }[],
-  userMessage: string,
-  garminContext = ''
+  userMessage: string
 ): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
 
-  const context = buildAdaptationContext(plan, weeksData, runLog, garminContext);
+  const context = buildAdaptationContext(plan, weeksData, runLog);
   const distance = plan.distance || 'Marathon';
   const athleteName = [plan.firstName, plan.lastName].filter(Boolean).join(' ') || 'athlete';
 

@@ -3,7 +3,6 @@ import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
 import type { LoggedRun } from '@/lib/store';
 import { adaptPlanWithAI, getAccessTokenForPlan } from '@/lib/ai-plan';
-import { getGarminContext } from '@/lib/garmin';
 import { countsTowardRunningVolume, fetchStravaActivities } from '@/lib/strava';
 import { generatePlanWeeks, type PlanWeek } from '@/lib/plan-generator';
 import { getPlanWeek1Monday, weekNumberFromPlanStart } from '@/lib/training-week-calendar';
@@ -190,12 +189,10 @@ export async function POST(
   const refreshed = await getPlan(planId);
   if (refreshed?.weeksData?.length && process.env.GEMINI_API_KEY) {
     try {
-      const garminContext = await getGarminContext(planId);
       const { coachNote, suggestedWeeks } = await adaptPlanWithAI(
         refreshed,
         refreshed.weeksData,
-        refreshed.runLog ?? [],
-        garminContext
+        refreshed.runLog ?? []
       );
       await updatePlan(planId, {
         adaptationNote: coachNote,

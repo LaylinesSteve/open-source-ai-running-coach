@@ -3,7 +3,6 @@ import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
 import type { CoachChatMessage } from '@/lib/store';
 import { chatWithCoach, MAX_CHAT_HISTORY_STORED } from '@/lib/ai-plan';
-import { getGarminContext } from '@/lib/garmin';
 import { generatePlanWeeks } from '@/lib/plan-generator';
 
 export async function POST(
@@ -55,15 +54,7 @@ export async function POST(
   }));
 
   try {
-    const garminContext = await getGarminContext(planId);
-    const reply = await chatWithCoach(
-      plan,
-      weeksData,
-      plan.runLog ?? [],
-      prior,
-      message,
-      garminContext
-    );
+    const reply = await chatWithCoach(plan, weeksData, plan.runLog ?? [], prior, message);
     const at = new Date().toISOString();
     const userEntry: CoachChatMessage = { role: 'user', content: message, at };
     const assistantEntry: CoachChatMessage = { role: 'assistant', content: reply, at };

@@ -3,7 +3,6 @@ import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
 import { getAccessTokenForPlan } from '@/lib/ai-plan';
 import { baselineFitnessFromRunLog, buildStravaSummary } from '@/lib/ai-plan';
-import { getGarminContext } from '@/lib/garmin';
 import { fetchStravaActivities } from '@/lib/strava';
 import { revisePlanWithAI } from '@/lib/ai-plan';
 import { planWeeksToHtml } from '@/lib/plan-generator';
@@ -51,14 +50,12 @@ export async function POST(
   try {
     const baselineBlock = baselineFitnessFromRunLog(plan.runLog ?? []);
     const stravaForRevise = [stravaSummary, baselineBlock].filter(Boolean).join('\n\n');
-    const garminContext = await getGarminContext(planId);
 
     const { weeks, coachSummary } = await revisePlanWithAI(
       plan,
       stravaForRevise,
       currentWeeks,
-      userRequest,
-      garminContext
+      userRequest
     );
     const distance = plan.distance || 'Marathon';
     const html = planWeeksToHtml(

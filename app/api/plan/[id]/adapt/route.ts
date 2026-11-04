@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
 import { adaptPlanWithAI } from '@/lib/ai-plan';
-import { getGarminContext } from '@/lib/garmin';
 
 export async function POST(
   request: NextRequest,
@@ -25,13 +24,7 @@ export async function POST(
 
   try {
     const runLog = plan.runLog ?? [];
-    const garminContext = await getGarminContext(planId);
-    const { coachNote, suggestedWeeks } = await adaptPlanWithAI(
-      plan,
-      plan.weeksData,
-      runLog,
-      garminContext
-    );
+    const { coachNote, suggestedWeeks } = await adaptPlanWithAI(plan, plan.weeksData, runLog);
 
     await updatePlan(planId, {
       adaptationNote: coachNote,

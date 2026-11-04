@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 function UnlockForm() {
   const next = useSearchParams().get('next') ?? '';
   // Only return to a known page on this site, never to a URL from the query string.
-  const destination = /^\/app\/(plan|admin)\//.test(next) ? next : '/app';
+  const destination = /^\/app\/((plan|admin)\/|running-form$)/.test(next) ? next : '/app';
   const [passkey, setPasskey] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);

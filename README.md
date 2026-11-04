@@ -8,6 +8,7 @@ A Strava + AI running coach that builds **personalized training plans for any go
 - **`/app`** — Same landing as `/`.
 - **`/app/form`** — Form: your goal (race name or distance), race date, optional link, optional "Connect Strava". Submit → create plan → redirect to Strava (if checked) or to your plan page.
 - **`/app/admin/plans`** — All plans, behind `PASSKEY`.
+- **`/app/running-form`** — Running form trends from your Garmin activity files, behind `PASSKEY`.
 - **`/app/plan/[id]`** — Your generated plan (shareable link). If you connected Strava, the AI uses your running history to personalize the plan for your current fitness; otherwise it’s built from your goal and date. Works for any distance and experience level.
 
 ## Environment variables
@@ -25,21 +26,27 @@ Copy **`.env.example`** to **`.env`** and fill in:
 | `GEMINI_API_KEY` | Yes (for AI plans) | Google Gemini API key ([aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)); used to personalize plans from Strava data. |
 | `GEMINI_MODEL` | No | Gemini model name (default: `gemini-2.5-flash`). Override if the default is deprecated (e.g. `gemini-3-flash-preview`). |
 | `COOKIE_SECRET` | No | Optional; for cookie signing. If unset, `PASSKEY` is used. |
-| `GARMIN_PERSONAL_API_KEY` | No | Your [Garmin Connect personal API key](https://connect.garmin.com/app/settings/personalApiToken). See [Garmin data](#garmin-data). |
-| `GARMIN_PLAN_IDS` | No | Comma-separated plan ids that get Garmin data. These plans need `PASSKEY` to open. |
+| `GARMIN_PERSONAL_API_KEY` | No | Your [Garmin Connect personal API key](https://connect.garmin.com/app/settings/personalApiToken), for [running form](#running-form). |
+| `GARMIN_PLAN_IDS` | No | Comma-separated plan ids that need `PASSKEY` to open. Other plans stay open by link. |
 | `GARMIN_TIME_ZONE` | No | IANA time zone so "today" matches your watch, e.g. `America/New_York`. Default `UTC`. |
 | `NEXT_PUBLIC_CONTACT_EMAIL` | No | If set, footer shows this contact email. Otherwise shows "Open an issue in the project repository." |
 | `NEXT_PUBLIC_COPYRIGHT` | No | If set, footer shows this copyright line (e.g. "© 2026 Your Name. All rights reserved."). |
 
-## Garmin data
+## Running form
 
-The coach can read your own Garmin data: activities, sleep, HRV, Body Battery, stress, daily summaries and heart rate zones. It sees the last 14 days in full, and the rest of the past 6 months as averages and totals for each 4-week block. It uses this in coach chat, progress updates and plan revisions. Data is pulled when one of those runs, not on a schedule.
+`/app/running-form` shows how your running form changes over the past 6 months, using the activity files your Garmin recorded. It's separate from the coach, which only uses Strava.
+
+- **Trends:** weekly cadence, ground contact time and balance, stride, vertical oscillation and ratio, power and heart rate, if your watch records them. You can compare weeks at one pace, because form changes with pace. Walking and stops are left out.
+- **Long runs:** how each metric changed from the first quarter of a run to the last.
+- **AI review:** a written review of the same numbers, from Gemini, when you ask for it.
+
+To set it up:
 
 1. Create a key at [Garmin Connect → Personal API tokens](https://connect.garmin.com/app/settings/personalApiToken).
-2. Set `GARMIN_PERSONAL_API_KEY` to that key, and `GARMIN_PLAN_IDS` to your plan id (the id in `/app/plan/<id>`).
-3. Redeploy if you changed the variables on Vercel, then open your plan and enter `PASSKEY` at `/app/unlock`.
+2. Set `GARMIN_PERSONAL_API_KEY` to that key, and redeploy if you changed it on Vercel.
+3. Open `/app/running-form`, enter `PASSKEY` and click **Analyze my runs**. The first time takes a few minutes, because each run's file is downloaded.
 
-A Garmin personal key is for your own data, so only plans in `GARMIN_PLAN_IDS` get it, and those plans stop being open by link. Known GPS, free-text and account fields are dropped by field name, and the rest is sent to Gemini with each request. Raw Garmin data isn't stored, though coach replies that mention it are saved with the plan. Garmin keys expire after 30 days to one year, so renew yours when Garmin emails you.
+Runs are read only when you click that button. Only the per-run averages shown on the page are saved, in Redis. Activity files, GPS tracks and device details are never stored or sent to Gemini. Garmin keys expire after 30 days to one year, so renew yours when Garmin emails you.
 
 ## What is KV? Storage (Redis)
 

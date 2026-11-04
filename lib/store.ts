@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { createClient, type RedisClientType } from 'redis';
 import type { PlanWeek } from '@/lib/plan-generator';
+import type { FormStore } from '@/lib/form-trends';
 
 export interface PlanRecord {
   id: string;
@@ -191,6 +192,27 @@ export async function listAllPlansSummary(): Promise<PlanSummaryItem[]> {
   }
   summaries.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   return summaries;
+}
+
+const FORM_KEY = 'form:data';
+
+export async function getFormStore(): Promise<FormStore> {
+  const empty: FormStore = { runs: [], pending: [] };
+  const upstash = getUpstashRedis();
+  if (upstash) return (await upstash.get<FormStore>(FORM_KEY)) ?? empty;
+  const client = await getNodeRedis();
+  const raw = await client?.get(FORM_KEY);
+  return raw ? (JSON.parse(raw) as FormStore) : empty;
+}
+
+export async function setFormStore(data: FormStore): Promise<void> {
+  const upstash = getUpstashRedis();
+  if (upstash) {
+    await upstash.set(FORM_KEY, data, { ex: TTL_SEC });
+    return;
+  }
+  const client = await getNodeRedis();
+  await client?.set(FORM_KEY, JSON.stringify(data), { EX: TTL_SEC });
 }
 
 /** Count an event under a key that expires ttlSec after the first event. */
