@@ -144,7 +144,33 @@ export function buildPrePlanBaselineSummary(activities: StravaActivity[], planWe
   lines.push(
     `Run-like baseline: ${runs.length} sessions, ~${totalMi.toFixed(0)} mi total, longest ~${longest.toFixed(1)} mi.`
   );
+
+  // Long efforts with times, so the coach can judge a realistic goal (e.g. a recent ultra or marathon).
+  const longEfforts = [...runs]
+    .sort((a, b) => (b.distance ?? 0) - (a.distance ?? 0))
+    .slice(0, 3)
+    .map((r) => {
+      const mi = ((r.distance ?? 0) / 1609.34).toFixed(1);
+      const sec = r.moving_time ?? 0;
+      const time = sec > 0 ? ` in ${Math.floor(sec / 3600)}h${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}m` : '';
+      const gain = r.total_elevation_gain ? `, ${Math.round(r.total_elevation_gain * 3.28084)} ft gain` : '';
+      return `  ${r.start_date.slice(0, 10)} ${r.name}: ${mi} mi${time}${gain}`;
+    });
+  lines.push('Longest runs:', ...longEfforts);
   return lines.join('\n');
+}
+
+/**
+ * Strava context for the coach: recent weekly summary plus the pre-plan baseline, anchored to the plan's
+ * current length. Rebuild this whenever the plan length changes, or the baseline window goes stale.
+ */
+export function buildStravaContextForPlan(
+  activities: StravaActivity[],
+  raceDate: string,
+  totalWeeks: number
+): string {
+  const baselineBlock = buildPrePlanBaselineSummary(activities, getPlanWeek1Monday(raceDate, totalWeeks));
+  return [buildStravaSummary(activities), baselineBlock].filter(Boolean).join('\n\n');
 }
 
 /** Text block from synced run log rows with weekNum 0 (for revise / coach context). */

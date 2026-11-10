@@ -104,7 +104,7 @@ export default function LongRunProgress({
     <div className="plan-long-run-progress section-wrap">
       <style dangerouslySetInnerHTML={{ __html: scopedCss }} />
       <section className="progress-section" id="progress">
-        <p className="section-label">Long run progression</p>
+        <p className="section-label">Weekly mileage</p>
         <h2 className="section-title font-display">Build to race day</h2>
         <p className="progress-hint">
           Past weeks show logged running miles (Strava). Green means you hit at least the planned weekly mileage target.
