@@ -1,7 +1,13 @@
 import type { PlanWeek } from '@/lib/plan-generator';
 import type { LoggedRun } from '@/lib/store';
 import { countsTowardRunningVolume } from '@/lib/strava';
-import { getPlanWeek1Monday } from '@/lib/training-week-calendar';
+import {
+  addDaysCalendar,
+  formatPlanDayLabel,
+  getPlanWeek1Monday,
+  plannedDayDate,
+  toLocalYmd,
+} from '@/lib/training-week-calendar';
 
 export interface MergedActual {
   name: string;
@@ -31,16 +37,6 @@ export function sumMergedRunRunningMi(run: MergedRun): number {
   return run.actuals
     .filter((a) => countsTowardRunningVolume(a.activityType))
     .reduce((sum, a) => sum + a.distanceMi, 0);
-}
-
-/** Parse "Tue 3/17" to { month, day }. */
-function parseRunDay(dayStr: string): { month: number; day: number } | null {
-  const match = dayStr.match(/(\d{1,2})\/(\d{1,2})/);
-  if (!match) return null;
-  const month = parseInt(match[1], 10);
-  const day = parseInt(match[2], 10);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return { month, day };
 }
 
 function loggedRunToMergedActual(r: LoggedRun): MergedActual {
@@ -74,22 +70,18 @@ export function mergeWeeksWithRunLog(
   const merged: MergedWeek[] = [];
 
   for (const week of weeksData) {
-    const weekStart = new Date(planStart);
-    weekStart.setDate(weekStart.getDate() + (week.num - 1) * 7);
-    const year = weekStart.getFullYear();
+    const weekStart = addDaysCalendar(planStart, (week.num - 1) * 7);
 
     const rowByDate = new Map<string, MergedRun>();
 
-    // Planned runs -> rows (with date from day string)
+    // Planned runs -> rows (date from the weekday within this plan week)
     for (const run of week.runs) {
-      const parsed = parseRunDay(run.day);
-      if (!parsed) continue;
-      const date = new Date(year, parsed.month - 1, parsed.day);
-      if (isNaN(date.getTime())) continue;
-      const dateStr = date.toISOString().slice(0, 10);
+      const date = plannedDayDate(run.day, weekStart);
+      if (!date || isNaN(date.getTime())) continue;
+      const dateStr = toLocalYmd(date);
       rowByDate.set(dateStr, {
         dateStr,
-        dayLabel: run.day,
+        dayLabel: formatPlanDayLabel(date),
         planned: { dist: run.dist, notes: run.notes ?? '', long: run.long, coachTip: run.coachTip },
       });
     }

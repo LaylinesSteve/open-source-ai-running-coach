@@ -5,22 +5,19 @@ import type { LoggedRun } from '@/lib/store';
 import { adaptPlanWithAI, getAccessTokenForPlan } from '@/lib/ai-plan';
 import { countsTowardRunningVolume, fetchStravaActivities } from '@/lib/strava';
 import { generatePlanWeeks, type PlanWeek } from '@/lib/plan-generator';
-import { getPlanWeek1Monday, weekNumberFromPlanStart } from '@/lib/training-week-calendar';
+import {
+  addDaysCalendar,
+  formatPlanDayLabel,
+  getPlanWeek1Monday,
+  plannedDayDate,
+  toLocalYmd,
+  weekNumberFromPlanStart,
+} from '@/lib/training-week-calendar';
 
 const SIX_MONTHS_SEC = 180 * 24 * 60 * 60;
 
 const MILES_PER_METER = 1 / 1609.34;
 const FEET_PER_METER = 3.28084;
-
-/** Parse "Tue 3/17" or "Sat 4/20" to { month, day }. */
-function parseRunDay(dayStr: string): { month: number; day: number } | null {
-  const match = dayStr.match(/(\d{1,2})\/(\d{1,2})/);
-  if (!match) return null;
-  const month = parseInt(match[1], 10);
-  const day = parseInt(match[2], 10);
-  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
-  return { month, day };
-}
 
 /** Format date as "Tue 3/17" for display. */
 function dayLabel(dateStr: string): string {
@@ -33,17 +30,12 @@ function dayLabel(dateStr: string): string {
 function getPlannedRuns(weeksData: PlanWeek[], planStart: Date): { date: string; weekNum: number; dayLabel: string; planned: string }[] {
   const out: { date: string; weekNum: number; dayLabel: string; planned: string }[] = [];
   for (const week of weeksData) {
-    const weekStart = new Date(planStart);
-    weekStart.setDate(weekStart.getDate() + (week.num - 1) * 7);
-    const year = weekStart.getFullYear();
+    const weekStart = addDaysCalendar(planStart, (week.num - 1) * 7);
     for (const run of week.runs) {
       if (!run.dist || /rest|optional|\+ ?1 optional/i.test(run.dist)) continue;
-      const parsed = parseRunDay(run.day);
-      if (!parsed) continue;
-      const date = new Date(year, parsed.month - 1, parsed.day);
-      if (isNaN(date.getTime())) continue;
-      const dateStr = date.toISOString().slice(0, 10);
-      out.push({ date: dateStr, weekNum: week.num, dayLabel: run.day, planned: run.dist });
+      const date = plannedDayDate(run.day, weekStart);
+      if (!date || isNaN(date.getTime())) continue;
+      out.push({ date: toLocalYmd(date), weekNum: week.num, dayLabel: formatPlanDayLabel(date), planned: run.dist });
     }
   }
   return out;

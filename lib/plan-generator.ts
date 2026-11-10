@@ -253,7 +253,7 @@ export function planWeeksToHtml(
     ${raceUrl ? `<a href="${raceUrl}" target="_blank" rel="noopener">Race info</a>` : ''}
   </header>
   <section class="progress-section" id="progress">
-    <p class="section-label">Long run progression</p>
+    <p class="section-label">Weekly mileage</p>
     <h2 class="section-title font-display">Build to race day</h2>
     <div class="progress-grid">
       ${progressBars}

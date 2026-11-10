@@ -2,7 +2,11 @@ import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
 import { clampPlanWeeks, getDefaultWeeksForDistance, MAX_PLAN_WEEKS } from '@/lib/race-distances';
 import { isUltraDistance, ultraTrainingPromptBlock } from '@/lib/ultra-training-prompt';
-import { getPlanWeek1Monday, startOfMondayWeekContaining } from '@/lib/training-week-calendar';
+import {
+  getPlanWeek1Monday,
+  startOfMondayWeekContaining,
+  withDatedDayLabels,
+} from '@/lib/training-week-calendar';
 import {
   countsTowardRunningVolume,
   refreshStravaToken,
@@ -144,7 +148,33 @@ export function buildPrePlanBaselineSummary(activities: StravaActivity[], planWe
   lines.push(
     `Run-like baseline: ${runs.length} sessions, ~${totalMi.toFixed(0)} mi total, longest ~${longest.toFixed(1)} mi.`
   );
+
+  // Long efforts with times, so the coach can judge a realistic goal (e.g. a recent ultra or marathon).
+  const longEfforts = [...runs]
+    .sort((a, b) => (b.distance ?? 0) - (a.distance ?? 0))
+    .slice(0, 3)
+    .map((r) => {
+      const mi = ((r.distance ?? 0) / 1609.34).toFixed(1);
+      const sec = r.moving_time ?? 0;
+      const time = sec > 0 ? ` in ${Math.floor(sec / 3600)}h${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}m` : '';
+      const gain = r.total_elevation_gain ? `, ${Math.round(r.total_elevation_gain * 3.28084)} ft gain` : '';
+      return `  ${r.start_date.slice(0, 10)} ${r.name}: ${mi} mi${time}${gain}`;
+    });
+  lines.push('Longest runs:', ...longEfforts);
   return lines.join('\n');
+}
+
+/**
+ * Strava context for the coach: recent weekly summary plus the pre-plan baseline, anchored to the plan's
+ * current length. Rebuild this whenever the plan length changes, or the baseline window goes stale.
+ */
+export function buildStravaContextForPlan(
+  activities: StravaActivity[],
+  raceDate: string,
+  totalWeeks: number
+): string {
+  const baselineBlock = buildPrePlanBaselineSummary(activities, getPlanWeek1Monday(raceDate, totalWeeks));
+  return [buildStravaSummary(activities), baselineBlock].filter(Boolean).join('\n\n');
 }
 
 /** Text block from synced run log rows with weekNum 0 (for revise / coach context). */
@@ -275,8 +305,8 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
   const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
 
-  // Normalize: ensure last week is race week with correct label
-  const normalized: PlanWeek[] = rawWeeks.slice(0, n).map((w: Record<string, unknown>, i: number) => ({
+  // Normalize: ensure last week is race week with correct label, and every day label carries its date
+  const normalized: PlanWeek[] = withDatedDayLabels(rawWeeks.slice(0, n).map((w: Record<string, unknown>, i: number) => ({
     num: i + 1,
     range: String(w.range ?? ''),
     miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
@@ -290,7 +320,7 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
       long: Boolean(r.long),
       coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
-  }));
+  })), plan.raceDate);
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : '';
   const rawTips = Array.isArray(obj.tips) ? obj.tips : [];
@@ -410,7 +440,8 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
   const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
   const rawSlice = rawWeeks.slice(0, n) as unknown as Record<string, unknown>[];
-  const normalized: PlanWeek[] = rawSlice.map((w, i) => ({
+  // The model sometimes drops the date from day labels ("Tue" instead of "Tue 3/17"); restore it.
+  const normalized: PlanWeek[] = withDatedDayLabels(rawSlice.map((w, i) => ({
     num: i + 1,
     range: String(w.range ?? ''),
     miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
@@ -424,7 +455,7 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
       long: Boolean(r.long),
       coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
-  }));
+  })), plan.raceDate);
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : 'Plan updated based on your feedback.';
   return { weeks: normalized, coachSummary };

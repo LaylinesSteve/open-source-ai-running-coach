@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
-import { getAccessTokenForPlan } from '@/lib/ai-plan';
-import { baselineFitnessFromRunLog, buildStravaSummary } from '@/lib/ai-plan';
+import {
+  baselineFitnessFromRunLog,
+  buildStravaContextForPlan,
+  getAccessTokenForPlan,
+  revisePlanWithAI,
+} from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
-import { revisePlanWithAI } from '@/lib/ai-plan';
 import { planWeeksToHtml } from '@/lib/plan-generator';
 
 export async function POST(
@@ -25,22 +28,26 @@ export async function POST(
     return NextResponse.json({ error: 'Request text is required' }, { status: 400 });
   }
 
+  const currentWeeks = plan.weeksData;
+  if (!currentWeeks || currentWeeks.length < 1) {
+    return NextResponse.json({ error: 'No plan data to revise' }, { status: 400 });
+  }
+
+  // Rebuild the Strava context on every revision: the stored text was anchored to the plan's length when
+  // it was first generated, so after a revision changes the length its "pre-plan baseline" covers the wrong weeks.
   let stravaSummary = plan.stravaSummaryText || '';
-  if (plan.stravaRefreshToken && !stravaSummary) {
+  let refreshedStravaSummary: string | undefined;
+  if (plan.stravaRefreshToken) {
     try {
       const accessToken = await getAccessTokenForPlan(plan);
       if (accessToken) {
         const activities = await fetchStravaActivities(accessToken);
-        stravaSummary = buildStravaSummary(activities);
+        refreshedStravaSummary = buildStravaContextForPlan(activities, plan.raceDate, currentWeeks.length);
+        stravaSummary = refreshedStravaSummary;
       }
     } catch {
-      // continue with empty Strava summary
+      // keep the stored summary
     }
-  }
-
-  const currentWeeks = plan.weeksData;
-  if (!currentWeeks || currentWeeks.length < 1) {
-    return NextResponse.json({ error: 'No plan data to revise' }, { status: 400 });
   }
 
   if (!process.env.GEMINI_API_KEY) {
@@ -75,6 +82,7 @@ export async function POST(
       coachSummary: coachSummary || plan.coachSummary,
       weeks: weeks.length,
       weeksData: weeks,
+      ...(refreshedStravaSummary ? { stravaSummaryText: refreshedStravaSummary } : {}),
       revisionRequests,
       coachSummaryHistory,
     });
