@@ -2,7 +2,11 @@ import type { PlanRecord, LoggedRun } from '@/lib/store';
 import type { PlanWeek } from '@/lib/plan-generator';
 import { clampPlanWeeks, getDefaultWeeksForDistance, MAX_PLAN_WEEKS } from '@/lib/race-distances';
 import { isUltraDistance, ultraTrainingPromptBlock } from '@/lib/ultra-training-prompt';
-import { getPlanWeek1Monday, startOfMondayWeekContaining } from '@/lib/training-week-calendar';
+import {
+  getPlanWeek1Monday,
+  startOfMondayWeekContaining,
+  withDatedDayLabels,
+} from '@/lib/training-week-calendar';
 import {
   countsTowardRunningVolume,
   refreshStravaToken,
@@ -301,8 +305,8 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
   const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
 
-  // Normalize: ensure last week is race week with correct label
-  const normalized: PlanWeek[] = rawWeeks.slice(0, n).map((w: Record<string, unknown>, i: number) => ({
+  // Normalize: ensure last week is race week with correct label, and every day label carries its date
+  const normalized: PlanWeek[] = withDatedDayLabels(rawWeeks.slice(0, n).map((w: Record<string, unknown>, i: number) => ({
     num: i + 1,
     range: String(w.range ?? ''),
     miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
@@ -316,7 +320,7 @@ Generate the ${numWeeks}-week plan. Return JSON: { "weeks": [ ... ], "coachSumma
       long: Boolean(r.long),
       coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
-  }));
+  })), plan.raceDate);
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : '';
   const rawTips = Array.isArray(obj.tips) ? obj.tips : [];
@@ -436,7 +440,8 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
   const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
   const rawSlice = rawWeeks.slice(0, n) as unknown as Record<string, unknown>[];
-  const normalized: PlanWeek[] = rawSlice.map((w, i) => ({
+  // The model sometimes drops the date from day labels ("Tue" instead of "Tue 3/17"); restore it.
+  const normalized: PlanWeek[] = withDatedDayLabels(rawSlice.map((w, i) => ({
     num: i + 1,
     range: String(w.range ?? ''),
     miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
@@ -450,7 +455,7 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
       long: Boolean(r.long),
       coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
-  }));
+  })), plan.raceDate);
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : 'Plan updated based on your feedback.';
   return { weeks: normalized, coachSummary };
