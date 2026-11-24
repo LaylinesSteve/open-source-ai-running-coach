@@ -166,6 +166,7 @@ const doneRowCss = `
 #weeksGrid .run-row.done .run-coach-tip { border-left-color: #22c55e; }
 #weeksGrid .run-done-check { margin-right: 0.3rem; font-weight: 700; }
 #weeksGrid .run-strava-link { color: #fc5200; font-weight: 600; text-decoration: none; white-space: nowrap; }
+#weeksGrid .run-row.done .run-strava-link { color: #4ade80; }
 #weeksGrid .run-strava-link:hover,
 #weeksGrid .run-strava-link:focus-visible { text-decoration: underline; }
 `;
