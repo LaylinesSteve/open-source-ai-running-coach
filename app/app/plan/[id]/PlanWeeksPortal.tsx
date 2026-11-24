@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { MergedActual, MergedRun, MergedWeek } from '@/lib/merge-runs';
-import { sumMergedRunRunningMi } from '@/lib/merge-runs';
+import { isPlannedWorkoutDone, sumMergedRunRunningMi } from '@/lib/merge-runs';
 import { stravaActivityLabel } from '@/lib/strava';
 
 function formatDuration(sec?: number): string {
@@ -37,9 +37,11 @@ type DisplayRow = {
   notes: string;
   coachTip?: string;
   isLong: boolean;
+  done: boolean;
 };
 
 function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
+  const done = isPlannedWorkoutDone(run);
   const actuals = run.actuals ?? [];
   const plannedDist = run.planned?.dist?.trim() ?? '';
   const isRestPlanned = /rest|optional|\+ ?1 optional/i.test(plannedDist);
@@ -55,6 +57,7 @@ function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
         notes: run.planned?.notes ?? '',
         coachTip: run.planned?.coachTip?.trim(),
         isLong: run.planned?.long ?? false,
+        done,
       },
     ];
   }
@@ -71,6 +74,7 @@ function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
       notes: notesParts.filter(Boolean).join(' · '),
       coachTip: i === 0 ? run.planned?.coachTip?.trim() : undefined,
       isLong: (run.planned?.long ?? false) && i === 0,
+      done,
     };
   });
 }
@@ -110,9 +114,19 @@ function WeekCard({ week }: { week: MergedWeek }) {
           <div className="week-body-inner">
             <div className="week-runs">
               {displayRows.map((row) => (
-                <div key={row.key} className={'run-row' + (row.isLong ? ' long' : '')}>
+                <div
+                  key={row.key}
+                  className={'run-row' + (row.isLong ? ' long' : '') + (row.done ? ' done' : '')}
+                >
                   <div className="run-row-top">
-                    <span className="run-day">{row.dayLabel}</span>
+                    <span className="run-day">
+                      {row.done ? (
+                        <span className="run-done-check" role="img" aria-label="Completed">
+                          ✓
+                        </span>
+                      ) : null}
+                      {row.dayLabel}
+                    </span>
                     <span className="run-dist">{row.dist}</span>
                     <span className="run-notes">{row.notes}</span>
                   </div>
@@ -127,9 +141,25 @@ function WeekCard({ week }: { week: MergedWeek }) {
   );
 }
 
+/** Lives here rather than in the stored plan HTML so it applies to plans generated before it existed. */
+const doneRowCss = `
+#weeksGrid .run-row.done {
+  background: rgba(34, 197, 94, 0.1);
+  box-shadow: inset 3px 0 0 #22c55e;
+  border-radius: 6px;
+  padding-left: 0.65rem;
+  padding-right: 0.65rem;
+  margin: 2px 0;
+}
+#weeksGrid .run-row.done .run-dist,
+#weeksGrid .run-row.done .run-day { color: #4ade80; }
+#weeksGrid .run-done-check { margin-right: 0.3rem; font-weight: 700; }
+`;
+
 function WeekCards({ weeks }: { weeks: MergedWeek[] }) {
   return (
     <>
+      <style dangerouslySetInnerHTML={{ __html: doneRowCss }} />
       {weeks.map((week) => (
         <WeekCard key={week.num} week={week} />
       ))}
