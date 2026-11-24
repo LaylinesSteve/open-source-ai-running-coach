@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlan, updatePlan } from '@/lib/store';
 import { requirePlanAccess } from '@/lib/auth';
-import { getStrengthWorkout, sanitizeSession } from '@/lib/strength';
+import { findWorkout, sanitizeSession } from '@/lib/strength';
 
 /** Sessions kept per plan. Two a week for a 24-week build is under 50. */
 const MAX_SESSIONS = 200;
@@ -25,7 +25,7 @@ export async function PUT(
   } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const workout = typeof body?.workoutId === 'string' ? getStrengthWorkout(body.workoutId) : null;
+  const workout = typeof body?.workoutId === 'string' ? findWorkout(plan.strengthWorkouts, body.workoutId) : null;
   if (!workout) {
     return NextResponse.json({ error: 'Unknown workout' }, { status: 400 });
   }

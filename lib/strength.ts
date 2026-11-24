@@ -217,9 +217,18 @@ export const STRENGTH_WORKOUTS: StrengthWorkout[] = [
   },
 ];
 
-export function getStrengthWorkout(id?: string | null): StrengthWorkout | null {
-  if (!id) return STRENGTH_WORKOUTS[0] ?? null;
-  return STRENGTH_WORKOUTS.find((w) => w.id === id) ?? null;
+export function isBuiltInWorkout(id: string): boolean {
+  return STRENGTH_WORKOUTS.some((w) => w.id === id);
+}
+
+/** Every workout a plan can run: its own first, then the built-ins. */
+export function workoutsForPlan(custom?: StrengthWorkout[]): StrengthWorkout[] {
+  return [...(custom ?? []), ...STRENGTH_WORKOUTS];
+}
+
+export function findWorkout(custom: StrengthWorkout[] | undefined, id?: string | null): StrengthWorkout | null {
+  if (!id) return null;
+  return workoutsForPlan(custom).find((w) => w.id === id) ?? null;
 }
 
 export function emptySession(workoutId: string, date: string): StrengthSession {
@@ -430,4 +439,123 @@ export function sanitizeSession(workout: StrengthWorkout, input: unknown): Stren
     session.updatedAt = raw.updatedAt;
   }
   return session;
+}
+
+/** Caps on a saved workout. They bound the stored record and keep the tracker usable on a phone. */
+export const WORKOUT_LIMITS = {
+  workoutsPerPlan: 30,
+  blocks: 6,
+  groupsPerBlock: 10,
+  exercisesPerGroup: 3,
+  sets: 10,
+  restSec: 600,
+  timedSec: 600,
+  reps: 999,
+};
+
+const ID_RE = /^[a-z0-9][a-z0-9-]{0,39}$/;
+
+function cleanText(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim().slice(0, max) : '';
+}
+
+function cleanInt(value: unknown, min: number, max: number): number | null {
+  const n = typeof value === 'number' ? value : typeof value === 'string' && value.trim() !== '' ? Number(value) : NaN;
+  if (!Number.isFinite(n)) return null;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function slug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30);
+}
+
+/** Keep a valid id that isn't taken; otherwise derive one from the name. Logged sessions are keyed by exercise id, so ids must survive an edit. */
+function claimId(wanted: unknown, name: string, used: Set<string>): string {
+  let id = typeof wanted === 'string' && ID_RE.test(wanted) && !used.has(wanted) ? wanted : '';
+  if (!id) {
+    const base = slug(name) || 'item';
+    id = base;
+    for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
+  }
+  used.add(id);
+  return id;
+}
+
+function cleanVideo(value: unknown): string | undefined {
+  if (typeof value !== 'string' || value.length > 300) return undefined;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'https:' ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Rebuild a workout from untrusted input (the builder form or the AI), keeping
+ * only known fields within WORKOUT_LIMITS. Returns null when there is no title
+ * or no usable exercise. dropVideos is for AI drafts: a model invents links.
+ */
+export function sanitizeWorkout(input: unknown, options: { dropVideos?: boolean } = {}): StrengthWorkout | null {
+  if (!input || typeof input !== 'object') return null;
+  const raw = input as Record<string, unknown>;
+  const title = cleanText(raw.title, 60);
+  if (!title) return null;
+
+  const blockIds = new Set<string>();
+  const exerciseIds = new Set<string>();
+  const blocks: StrengthBlock[] = [];
+  for (const rawBlock of Array.isArray(raw.blocks) ? raw.blocks.slice(0, WORKOUT_LIMITS.blocks) : []) {
+    if (!rawBlock || typeof rawBlock !== 'object') continue;
+    const b = rawBlock as Record<string, unknown>;
+    const groups: StrengthGroup[] = [];
+    for (const rawGroup of Array.isArray(b.groups) ? b.groups.slice(0, WORKOUT_LIMITS.groupsPerBlock) : []) {
+      const rawExercises = (rawGroup as { exercises?: unknown } | null)?.exercises;
+      const exercises: StrengthExercise[] = [];
+      for (const rawEx of Array.isArray(rawExercises) ? rawExercises.slice(0, WORKOUT_LIMITS.exercisesPerGroup) : []) {
+        if (!rawEx || typeof rawEx !== 'object') continue;
+        const e = rawEx as Record<string, unknown>;
+        const name = cleanText(e.name, 60);
+        if (!name) continue;
+        const reps = cleanInt(e.reps, 1, WORKOUT_LIMITS.reps);
+        const timedSec = cleanInt(e.timedSec, 5, WORKOUT_LIMITS.timedSec);
+        const exercise: StrengthExercise = {
+          id: claimId(e.id, name, exerciseIds),
+          name,
+          sets: cleanInt(e.sets, 1, WORKOUT_LIMITS.sets) ?? 1,
+          target: cleanText(e.target, 40) || (reps != null ? `${reps} ${timedSec != null ? 'sec' : 'reps'}` : '1 set'),
+          restSec: cleanInt(e.restSec, 0, WORKOUT_LIMITS.restSec) ?? 0,
+        };
+        const tempo = cleanText(e.tempo, 30);
+        const cue = cleanText(e.cue, 240);
+        const video = options.dropVideos ? undefined : cleanVideo(e.video);
+        if (tempo) exercise.tempo = tempo;
+        if (timedSec != null) exercise.timedSec = timedSec;
+        if (e.load === true) exercise.load = true;
+        if (reps != null) exercise.reps = reps;
+        if (cue) exercise.cue = cue;
+        if (video) exercise.video = video;
+        exercises.push(exercise);
+      }
+      if (exercises.length) groups.push({ exercises });
+    }
+    if (!groups.length) continue;
+    const blockTitle = cleanText(b.title, 40) || 'Block';
+    const block: StrengthBlock = { id: claimId(b.id, blockTitle, blockIds), title: blockTitle, groups };
+    const note = cleanText(b.note, 240);
+    if (note) block.note = note;
+    blocks.push(block);
+  }
+  if (!blocks.length) return null;
+
+  return {
+    id: typeof raw.id === 'string' && ID_RE.test(raw.id) ? raw.id : '',
+    title,
+    subtitle: cleanText(raw.subtitle, 120),
+    blocks,
+  };
 }

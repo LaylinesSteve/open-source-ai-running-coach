@@ -2,7 +2,7 @@ import { Redis } from '@upstash/redis';
 import { createClient, type RedisClientType } from 'redis';
 import type { PlanWeek } from '@/lib/plan-generator';
 import type { FormChatMessage, FormStore } from '@/lib/form-trends';
-import type { StrengthSession } from '@/lib/strength';
+import type { StrengthSession, StrengthWorkout } from '@/lib/strength';
 
 export interface PlanRecord {
   id: string;
@@ -72,6 +72,8 @@ export interface PlanRecord {
   coachChatHistory?: CoachChatMessage[];
   /** Strength sessions logged from /app/plan/[id]/strength: one entry per workout per day. */
   strengthLog?: StrengthSession[];
+  /** Workouts built for this plan in the workout builder. The built-ins in lib/strength.ts are always available too. */
+  strengthWorkouts?: StrengthWorkout[];
 }
 
 export interface CoachChatMessage {
