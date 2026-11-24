@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback, type ReactNode } from 'react';
 import Link from 'next/link';
-import { FormVisual, PlanVisual, WeekVisual } from '@/app/components/ToolCardVisuals';
+import { FormVisual, PlanVisual, StrengthVisual, WeekVisual } from '@/app/components/ToolCardVisuals';
 import { SKINS } from '@/lib/weekly-skins';
 
 const KONAMI = [38, 38, 40, 40, 37, 39, 37, 39, 66, 65]; // up up down down left right left right B A
@@ -30,6 +30,14 @@ const TOOLS: {
     body: `Turn your Strava week into a card worth sharing. Pick from ${SKINS.length} visual themes, save the image and post it.`,
     note: 'Free · Connect Strava',
     link: { label: 'See my week', href: '/app/weekly' },
+  },
+  {
+    title: 'Strength session',
+    visual: <StrengthVisual />,
+    body: 'A tracker to use mid-workout. Tap sets off, log reps and weight, let the rest timer run, then save a summary image for Strava.',
+    note: 'Free · No sign-up to try',
+    link: { label: 'Try a session', href: '/app/strength' },
+    secondary: { label: 'Build your own with a plan', href: '/app/form' },
   },
   {
     title: 'Running form analysis',
@@ -156,15 +164,17 @@ export default function HomePage() {
         }
         @media (min-width: 960px) {
           .landing-tools {
-            max-width: 1240px;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            grid-template-rows: auto auto 1fr;
+            max-width: 1000px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             row-gap: 0;
           }
+          /* Each card spans three shared rows (title, preview, text) so the pair in a row lines up.
+             Row gap stays 0 inside a card, so the space between the two rows of cards is a margin. */
           .landing-tool {
             display: grid;
             grid-row: span 3;
             grid-template-rows: subgrid;
+            margin-bottom: 20px;
           }
         }
         .landing-tool-card {

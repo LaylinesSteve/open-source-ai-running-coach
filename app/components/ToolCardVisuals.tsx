@@ -14,6 +14,7 @@ const WeeklySkinDeco = dynamic(() => import('@/app/components/WeeklySkinDeco'), 
 
 const ORANGE = '#e85d04';
 const BLUE = '#3987e5';
+const GREEN = '#22c55e';
 const SURFACE = '#141414';
 const INK = '#f5f5f5';
 const MUTED = '#a3a3a3';
@@ -498,6 +499,86 @@ export function FormVisual() {
         { label: 'Cadence', value: '172', unit: 'spm' },
         { label: 'Stride', value: '1.04', unit: 'm' },
         { label: 'Vert. ratio', value: '7.9', unit: '%' },
+      ]}
+    />
+  );
+}
+
+/** Made up for the preview: a split squat part-way through, the way the tracker shows it. */
+const SAMPLE_SETS = [
+  { reps: 8, lb: 35, state: 'done' },
+  { reps: 8, lb: 35, state: 'done' },
+  { reps: 8, lb: 40, state: 'next' },
+  { reps: 8, lb: 40, state: 'todo' },
+] as const;
+
+function SetGrid() {
+  const cell = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 40,
+    borderRadius: 8,
+    fontFamily: DISPLAY_FONT,
+    fontSize: '1.3rem',
+    lineHeight: 1,
+  } as const;
+  const rowLabel = { ...smallText, display: 'flex', alignItems: 'center', height: 40, textTransform: 'uppercase', letterSpacing: '0.06em' } as const;
+  return (
+    <div style={{ height: PLOT_HEIGHT + LABEL_SPACE, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: 'none' }}>
+          <span style={rowLabel}>Set</span>
+          <span style={rowLabel}>Reps</span>
+          <span style={rowLabel}>Lb</span>
+        </div>
+        {SAMPLE_SETS.map((set, i) => {
+          const pending = set.state === 'todo';
+          return (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 6, flex: '1 1 0', minWidth: 0 }}>
+              <span
+                style={{
+                  ...cell,
+                  background: set.state === 'done' ? GREEN : set.state === 'next' ? ORANGE : 'transparent',
+                  border: `1px solid ${set.state === 'done' ? GREEN : set.state === 'next' ? ORANGE : 'rgba(255,255,255,0.2)'}`,
+                  color: set.state === 'done' ? '#052e16' : INK,
+                }}
+              >
+                {set.state === 'done' ? '✓' : i + 1}
+              </span>
+              <span style={{ ...cell, border: '1px solid rgba(255,255,255,0.14)', color: pending ? MUTED : INK }}>{set.reps}</span>
+              <span style={{ ...cell, border: '1px solid rgba(255,255,255,0.14)', color: pending ? MUTED : INK }}>{set.lb}</span>
+            </div>
+          );
+        })}
+      </div>
+      <div>
+        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+          <div style={{ width: '62%', height: '100%', borderRadius: 3, background: ORANGE }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+          <span style={smallText}>Rest 0:56</span>
+          <span style={smallText}>Next: set 3 of 4</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StrengthVisual() {
+  return (
+    <Panel
+      color={GREEN}
+      glow="rgba(34, 197, 94, 0.16)"
+      summary="Sample strength session: a Bulgarian split squat with two of four sets done at 8 reps and 35 pounds, a rest timer running, and set 3 next."
+      value="2/4"
+      unit="sets"
+      note="Sample: Bulgarian split squat, 4 × 6-8 per side"
+      chart={<SetGrid />}
+      stats={[
+        { label: 'Session', value: '24', unit: 'sets' },
+        { label: 'Time', value: '41', unit: 'min' },
+        { label: 'Lifted', value: '6,240', unit: 'lb' },
       ]}
     />
   );
