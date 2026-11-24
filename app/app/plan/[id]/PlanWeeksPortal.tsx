@@ -19,12 +19,14 @@ function formatActualNotes(actual: MergedActual): string {
     actual.activityType != null && actual.activityType !== ''
       ? stravaActivityLabel({ sport_type: actual.activityType, type: actual.activityType })
       : null;
+  // Sync stores "Planned: 4 mi" as the note; the row already leads with the current plan's hint.
+  const note = actual.note && !/^planned:/i.test(actual.note.trim()) ? actual.note : null;
   return [
     typeHint ? `[${typeHint}]` : null,
     actual.name,
     formatDuration(actual.movingTimeSec),
     actual.perceivedIntensity != null ? `RPE ${actual.perceivedIntensity}` : null,
-    actual.note,
+    note,
   ]
     .filter(Boolean)
     .join(' · ');
