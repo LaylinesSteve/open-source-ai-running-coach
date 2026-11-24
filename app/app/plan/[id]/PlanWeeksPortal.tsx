@@ -38,6 +38,8 @@ type DisplayRow = {
   coachTip?: string;
   isLong: boolean;
   done: boolean;
+  /** Link to the logged activity on Strava (synced activities only). */
+  stravaUrl?: string;
 };
 
 function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
@@ -75,6 +77,7 @@ function buildDisplayRows(run: MergedRun, rowIndex: number): DisplayRow[] {
       coachTip: i === 0 ? run.planned?.coachTip?.trim() : undefined,
       isLong: (run.planned?.long ?? false) && i === 0,
       done,
+      stravaUrl: actual.stravaId ? `https://www.strava.com/activities/${actual.stravaId}` : undefined,
     };
   });
 }
@@ -128,7 +131,22 @@ function WeekCard({ week }: { week: MergedWeek }) {
                       {row.dayLabel}
                     </span>
                     <span className="run-dist">{row.dist}</span>
-                    <span className="run-notes">{row.notes}</span>
+                    <span className="run-notes">
+                      {row.notes}
+                      {row.stravaUrl ? (
+                        <>
+                          {row.notes ? ' · ' : null}
+                          <a
+                            className="run-strava-link"
+                            href={row.stravaUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            View on Strava
+                          </a>
+                        </>
+                      ) : null}
+                    </span>
                   </div>
                   {row.coachTip ? <div className="run-coach-tip">{row.coachTip}</div> : null}
                 </div>
@@ -154,6 +172,9 @@ const doneRowCss = `
 #weeksGrid .run-row.done .run-dist,
 #weeksGrid .run-row.done .run-day { color: #4ade80; }
 #weeksGrid .run-done-check { margin-right: 0.3rem; font-weight: 700; }
+#weeksGrid .run-strava-link { color: #fc5200; font-weight: 600; text-decoration: none; white-space: nowrap; }
+#weeksGrid .run-strava-link:hover,
+#weeksGrid .run-strava-link:focus-visible { text-decoration: underline; }
 `;
 
 function WeekCards({ weeks }: { weeks: MergedWeek[] }) {

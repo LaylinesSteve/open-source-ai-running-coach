@@ -10,6 +10,8 @@ import {
 } from '@/lib/training-week-calendar';
 
 export interface MergedActual {
+  /** Strava activity ID; absent for manually added runs. */
+  stravaId?: number;
   name: string;
   activityType?: string;
   distanceMi: number;
@@ -64,6 +66,7 @@ export function isPlannedWorkoutDone(run: MergedRun): boolean {
 
 function loggedRunToMergedActual(r: LoggedRun): MergedActual {
   return {
+    stravaId: r.stravaId > 0 ? r.stravaId : undefined,
     name: r.name,
     activityType: r.activityType,
     distanceMi: r.distanceMi,
