@@ -19,7 +19,7 @@ import { getPlan, updatePlan } from '@/lib/store';
 const FIVE_MINUTES = 5 * 60;
 
 /** Gemini model for plan generation; override with GEMINI_MODEL env (e.g. gemini-2.5-flash, gemini-3-flash-preview). */
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 /** Get valid Strava access token for this plan, refreshing if needed. */
 export async function getAccessTokenForPlan(plan: PlanRecord): Promise<string | null> {
