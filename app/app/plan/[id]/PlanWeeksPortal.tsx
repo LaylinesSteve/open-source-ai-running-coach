@@ -161,16 +161,9 @@ function WeekCard({ week }: { week: MergedWeek }) {
 
 /** Lives here rather than in the stored plan HTML so it applies to plans generated before it existed. */
 const doneRowCss = `
-#weeksGrid .run-row.done {
-  background: rgba(34, 197, 94, 0.1);
-  box-shadow: inset 3px 0 0 #22c55e;
-  border-radius: 6px;
-  padding-left: 0.65rem;
-  padding-right: 0.65rem;
-  margin: 2px 0;
-}
 #weeksGrid .run-row.done .run-dist,
 #weeksGrid .run-row.done .run-day { color: #4ade80; }
+#weeksGrid .run-row.done .run-coach-tip { border-left-color: #22c55e; }
 #weeksGrid .run-done-check { margin-right: 0.3rem; font-weight: 700; }
 #weeksGrid .run-strava-link { color: #fc5200; font-weight: 600; text-decoration: none; white-space: nowrap; }
 #weeksGrid .run-strava-link:hover,
