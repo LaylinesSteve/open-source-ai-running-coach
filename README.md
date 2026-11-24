@@ -9,6 +9,7 @@ A Strava + AI running coach that builds **personalized training plans for any go
 - **`/app/form`** — Form: your goal (race name or distance), race date, optional link, optional "Connect Strava". Submit → create plan → redirect to Strava (if checked) or to your plan page.
 - **`/app/admin/plans`** — All plans, behind `PASSKEY`.
 - **`/app/running-form`** — Running form trends from your Garmin activity files, behind `PASSKEY`.
+- **`/app/plan/[id]/strength`** — Strength session tracker to use mid-workout: tap sets off, log reps and weight per set, rest and work timers, notes, and a summary image for Strava. Workouts are plain data in `lib/strength.ts`.
 - **`/app/plan/[id]`** — Your generated plan (shareable link). If you connected Strava, the AI uses your running history to personalize the plan for your current fitness; otherwise it’s built from your goal and date. Works for any distance and experience level.
 
 ## Environment variables

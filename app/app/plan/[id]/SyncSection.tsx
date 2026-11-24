@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import AddRunButton from './AddRunButton';
 import AdaptButton from './AdaptButton';
 import SyncButton from './SyncButton';
@@ -44,6 +45,22 @@ export default function SyncSection({
         {hasStrava && <SyncButton planId={planId} />}
         <AddRunButton planId={planId} />
         <AdaptButton planId={planId} />
+        <Link
+          href={`/app/plan/${planId}/strength`}
+          style={{
+            display: 'inline-block',
+            padding: '12px 20px',
+            background: '#262626',
+            border: '1px solid #404040',
+            color: '#f5f5f5',
+            fontWeight: 600,
+            borderRadius: 8,
+            fontSize: '0.9rem',
+            textDecoration: 'none',
+          }}
+        >
+          Strength Session
+        </Link>
       </div>
       {lastSyncAt && syncResult && (
         <p style={{ marginTop: '1rem', color: '#737373', fontSize: '0.85rem' }}>
