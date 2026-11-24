@@ -39,6 +39,29 @@ export function sumMergedRunRunningMi(run: MergedRun): number {
     .reduce((sum, a) => sum + a.distanceMi, 0);
 }
 
+/** Planned miles from "4 mi", "5–6 mi" (lower bound), "10 miles"; null when the day isn't measured in miles. */
+export function plannedMiles(dist: string): number | null {
+  const m = dist.match(/(\d+(?:\.\d+)?)\s*(?:[-–]\s*\d+(?:\.\d+)?\s*)?(?:mi|miles?)\b/i);
+  return m ? parseFloat(m[1]) : null;
+}
+
+/** Share of a run day's planned miles that must be logged for it to count as done. */
+const RUN_DONE_SHARE = 0.9;
+
+/**
+ * Whether a planned workout is done: run days need at least 90% of their planned running miles;
+ * gym / cross-training days (including "Rest + core work") count once any activity is logged.
+ * Plain rest days and unplanned extras never do.
+ */
+export function isPlannedWorkoutDone(run: MergedRun): boolean {
+  if (!run.planned || !run.actuals?.length) return false;
+  const miles = plannedMiles(run.planned.dist);
+  if (miles != null && miles > 0) return sumMergedRunRunningMi(run) >= miles * RUN_DONE_SHARE;
+  const notes = run.planned.notes.trim();
+  const isPlainRest = (/^rest\b/i.test(notes) && !notes.includes('+')) || /\brest\b/i.test(run.planned.dist);
+  return !isPlainRest;
+}
+
 function loggedRunToMergedActual(r: LoggedRun): MergedActual {
   return {
     name: r.name,
