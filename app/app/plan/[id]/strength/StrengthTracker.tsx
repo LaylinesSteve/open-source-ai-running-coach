@@ -47,8 +47,8 @@ function localDate(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function backupKey(planId: string, workoutId: string, date: string): string {
-  return `strength:${planId}:${workoutId}:${date}`;
+function backupKey(planId: string | undefined, workoutId: string, date: string): string {
+  return `strength:${planId ?? 'local'}:${workoutId}:${date}`;
 }
 
 function readBackup(key: string): StrengthSession | null {
@@ -104,7 +104,8 @@ export default function StrengthTracker({
   sessions,
   planLabel,
 }: {
-  planId: string;
+  /** Plan the session saves to. Without one (the try-it page) the session is kept on this device only. */
+  planId?: string;
   workout: StrengthWorkout;
   /** Saved sessions for this workout, any date. */
   sessions: StrengthSession[];
@@ -152,7 +153,7 @@ export default function StrengthTracker({
 
   // Save shortly after the last change, so a burst of taps is one request.
   useEffect(() => {
-    if (!session || !dirty.current) return;
+    if (!session || !dirty.current || !planId) return;
     setSaveState('saving');
     const handle = setTimeout(async () => {
       try {
@@ -483,7 +484,15 @@ export default function StrengthTracker({
 
   const timerLeft = timer ? Math.max(0, (timer.endsAt - now) / 1000) : 0;
   const saveText =
-    saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Saved' : saveState === 'error' ? 'Not saved yet, retrying' : '';
+    !planId
+      ? 'Saved on this device'
+      : saveState === 'saving'
+        ? 'Saving…'
+        : saveState === 'saved'
+          ? 'Saved'
+          : saveState === 'error'
+            ? 'Not saved yet, retrying'
+            : '';
   const h2Style: CSSProperties = { margin: 0, fontFamily: DISPLAY, fontSize: 24, letterSpacing: '0.05em', fontWeight: 400 };
   const quietButton: CSSProperties = {
     height: 44,
