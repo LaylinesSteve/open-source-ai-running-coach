@@ -9,6 +9,7 @@ import {
 } from '@/lib/ai-plan';
 import { fetchStravaActivities } from '@/lib/strava';
 import { planWeeksToHtml } from '@/lib/plan-generator';
+import { withWeeksSnapshot } from '@/lib/plan-weeks';
 
 export async function POST(
   request: NextRequest,
@@ -82,6 +83,12 @@ export async function POST(
       coachSummary: coachSummary || plan.coachSummary,
       weeks: weeks.length,
       weeksData: weeks,
+      weeksDataHistory: withWeeksSnapshot(plan.weeksDataHistory, {
+        at: now,
+        reason: `Before revision: ${userRequest.slice(0, 120)}`,
+        weeksData: currentWeeks,
+        coachSummary: plan.coachSummary,
+      }),
       ...(refreshedStravaSummary ? { stravaSummaryText: refreshedStravaSummary } : {}),
       revisionRequests,
       coachSummaryHistory,

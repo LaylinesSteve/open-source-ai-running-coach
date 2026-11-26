@@ -134,6 +134,8 @@ export interface StravaActivity {
   sport_type?: string;
   name: string;
   start_date: string;
+  /** Start time in the athlete's timezone; its date is the day they'd say they ran. */
+  start_date_local?: string;
   distance?: number;
   moving_time?: number;
   total_elevation_gain?: number;

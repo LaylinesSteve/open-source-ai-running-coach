@@ -1,6 +1,7 @@
 import { Redis } from '@upstash/redis';
 import { createClient, type RedisClientType } from 'redis';
 import type { PlanWeek } from '@/lib/plan-generator';
+import type { WeeksSnapshot } from '@/lib/plan-weeks';
 import type { FormChatMessage, FormStore } from '@/lib/form-trends';
 import type { StrengthSession, StrengthWorkout } from '@/lib/strength';
 
@@ -43,6 +44,10 @@ export interface PlanRecord {
   coachSummary?: string;
   /** Stored plan weeks for revision flow. */
   weeksData?: PlanWeek[];
+  /** The last few versions of weeksData, saved before each revision, restore, or sync rebalance. */
+  weeksDataHistory?: WeeksSnapshot[];
+  /** Last time sync re-planned the current week's remaining days around logged activity. */
+  weekRebalance?: { weekNum: number; at: string; signature: string; note: string; changed: boolean };
   /** Personalized tips (from AI or defaults). */
   tips?: { title: string; description: string; url?: string }[];
   /** Last Strava sync (ISO date). */
