@@ -7,6 +7,11 @@ type AdaptationPayload =
   | { ok: true }
   | { ok: false; error?: string; skipped?: string };
 
+type RebalancePayload =
+  | { status: 'updated'; weekNum: number; note: string }
+  | { status: 'skipped'; reason: string }
+  | { status: 'failed'; error: string };
+
 export default function SyncButton({
   planId,
   variant = 'primary',
@@ -29,7 +34,13 @@ export default function SyncButton({
     setWarn('');
     setLoading(true);
     try {
-      const res = await fetch(`/api/plan/${planId}/sync`, { method: 'POST' });
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const res = await fetch(`/api/plan/${planId}/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ today }),
+      });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || 'Sync failed');
@@ -37,7 +48,12 @@ export default function SyncButton({
         return;
       }
       const adaptation = data.adaptation as AdaptationPayload | undefined;
-      if (adaptation && !adaptation.ok && adaptation.error) {
+      const rebalance = data.rebalance as RebalancePayload | undefined;
+      if (rebalance?.status === 'updated') {
+        setWarn(`Coach adjusted the rest of week ${rebalance.weekNum}${rebalance.note ? `: ${rebalance.note}` : '.'}`);
+      } else if (rebalance?.status === 'failed') {
+        setWarn(`Synced, but this week’s plan wasn’t adjusted: ${rebalance.error}`);
+      } else if (adaptation && !adaptation.ok && adaptation.error) {
         setWarn(`Synced, but coach advice didn’t refresh: ${adaptation.error}`);
       }
       router.refresh();

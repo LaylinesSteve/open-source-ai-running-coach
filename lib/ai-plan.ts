@@ -15,6 +15,7 @@ import {
   type StravaActivity,
 } from '@/lib/strava';
 import { getPlan, updatePlan } from '@/lib/store';
+import { reconcileRevisedWeeks, type WeekRebalanceState } from '@/lib/plan-weeks';
 
 const FIVE_MINUTES = 5 * 60;
 
@@ -355,7 +356,7 @@ export async function revisePlanWithAI(
 
   const systemPrompt = `You are an expert running coach. The athlete has requested revisions to their ${numWeeks}-week ${distance} training plan (week ${numWeeks} must remain race week on ${raceDateStr}). You will be given their context, current plan, their request, and (when available) previous revision requests and what you said in past responses. Maintain continuity: acknowledge prior context where relevant and keep your tone and advice consistent.
 
-Return a revised plan that addresses their request. The athlete may ask for a longer or shorter plan: if lengthening, add weeks at the beginning (extra base/build) while keeping the final week as race week on ${raceDateStr}; if shortening, remove weeks from the early/base portion while preserving an appropriate taper and race week. If they do not ask to change length, keep the same number of weeks (${numWeeks}). Week numbers in the output must run contiguously from 1 through N where week N is race week.
+Return a revised plan that addresses their request. The athlete may ask for a longer or shorter plan: if lengthening, add weeks at the beginning (extra base/build) while keeping the final week as race week on ${raceDateStr}; if shortening, remove weeks from the early/base portion while preserving an appropriate taper and race week. If they do not ask to change length, keep the same number of weeks (${numWeeks}). Week numbers in the output must run contiguously from 1 through N where week N is race week. Always return the WHOLE plan, every week through race week, including weeks you did not change — even when the request is only about one week.
 
 If SYNCED PRE-PLAN BASELINE appears in the training text (activities before structured plan week 1), use it to judge fitness at plan entry when adjusting early volume—it is not missed plan compliance.
 
@@ -440,14 +441,13 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
   const n = Math.min(rawWeeks.length, MAX_PLAN_WEEKS);
   const raceLabel = plan.distance || 'Marathon';
   const rawSlice = rawWeeks.slice(0, n) as unknown as Record<string, unknown>[];
-  // The model sometimes drops the date from day labels ("Tue" instead of "Tue 3/17"); restore it.
-  const normalized: PlanWeek[] = withDatedDayLabels(rawSlice.map((w, i) => ({
-    num: i + 1,
+  const replyWeeks: PlanWeek[] = rawSlice.map((w, i) => ({
+    num: Number(w.num) || i + 1,
     range: String(w.range ?? ''),
-    miles: String(w.miles ?? (i === n - 1 ? '—' : '~0 mi')),
+    miles: String(w.miles ?? '~0 mi'),
     phase: String(w.phase ?? ''),
-    longRun: i === n - 1 ? raceLabel : String(w.longRun ?? ''),
-    raceWeek: i === n - 1,
+    longRun: String(w.longRun ?? ''),
+    raceWeek: w.raceWeek === true,
     runs: Array.isArray(w.runs) ? (w.runs as { day: string; dist: string; notes: string; long?: boolean; coachTip?: string }[]).map((r) => ({
       day: String(r.day ?? ''),
       dist: String(r.dist ?? ''),
@@ -455,10 +455,114 @@ Return JSON: { "weeks": [ ... ], "coachSummary": "..." }. Each run must have day
       long: Boolean(r.long),
       coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
     })) : [],
-  })), plan.raceDate);
+  }));
+
+  // A reply with only the changed weeks is merged into the plan rather than replacing it.
+  const { weeks: reconciled, partial } = reconcileRevisedWeeks(currentWeeks, replyWeeks, plan.raceDate);
+  const last = reconciled.length - 1;
+  const shaped = partial
+    ? reconciled
+    : reconciled.map((w, i) => ({
+        ...w,
+        num: i + 1,
+        miles: i === last && !w.miles ? '—' : w.miles,
+        longRun: i === last ? raceLabel : w.longRun,
+        raceWeek: i === last,
+      }));
+  // The model sometimes drops the date from day labels ("Tue" instead of "Tue 3/17"); restore it.
+  const normalized: PlanWeek[] = withDatedDayLabels(shaped, plan.raceDate);
 
   const coachSummary = typeof obj.coachSummary === 'string' ? obj.coachSummary.trim() : 'Plan updated based on your feedback.';
   return { weeks: normalized, coachSummary };
+}
+
+export interface RebalanceWeekResult {
+  runs: PlanWeek['runs'];
+  note: string;
+}
+
+/**
+ * After a sync, re-plan the rest of the current week around what was actually logged so the week still
+ * reaches its mileage goal. Returns only the remaining (open) days, in order; the caller enforces the totals.
+ */
+export async function rebalanceWeekWithAI(
+  plan: PlanRecord,
+  week: PlanWeek,
+  nextWeek: PlanWeek | undefined,
+  state: WeekRebalanceState
+): Promise<RebalanceWeekResult> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+
+  const describeDay = (d: WeekRebalanceState['days'][number]) => {
+    const planned = `planned ${d.run.dist || '—'}${d.run.notes ? ` (${d.run.notes})` : ''}${d.run.long ? ' [long run]' : ''}`;
+    const logged = d.logged.length
+      ? `logged: ${d.logged
+          .map((r) => `${r.name} (${r.activityType || 'Run'}${r.distanceMi > 0 ? `, ${r.distanceMi} mi` : ''}${r.movingTimeSec ? `, ${Math.round(r.movingTimeSec / 60)} min` : ''})`)
+          .join('; ')}`
+      : d.status === 'done'
+        ? 'logged: nothing'
+        : '';
+    return `- ${d.run.day} [${d.status === 'done' ? 'DONE' : 'REMAINING'}] ${planned}${logged ? ` — ${logged}` : ''}`;
+  };
+
+  const recentRequests = (plan.revisionRequests ?? []).slice(-3).map((r) => `- ${r.request.slice(0, 600)}`).join('\n');
+  const nextWeekLines = nextWeek
+    ? nextWeek.runs.slice(0, 3).map((r) => `- ${r.day}: ${r.dist} ${r.notes}`).join('\n')
+    : '';
+
+  const prompt = `You are an expert running coach. The athlete just synced Strava. Re-plan the REMAINING days of their current training week (week ${week.num}, ${week.range}, phase: ${week.phase}) so the week still reaches its mileage goal, taking into account what they actually did.
+
+Race: ${plan.raceName} (${plan.distance || 'Marathon'}) on ${plan.raceDate}.${plan.targetTime ? ` Target: ${plan.targetTime}.` : ''}${plan.additionalInfo ? `\nAthlete context: ${plan.additionalInfo}` : ''}${recentRequests ? `\nRecent requests from the athlete about the plan:\n${recentRequests}` : ''}
+
+This week's goal: ${state.goalMi} mi of running. Already logged: ${state.loggedMi} mi. The REMAINING days must total exactly ${state.targetMi} mi of running.
+
+This week:
+${state.days.map(describeDay).join('\n')}
+${nextWeekLines ? `\nNext week starts with:\n${nextWeekLines}\n` : ''}
+Rules:
+- Return ONLY the ${state.open.length} REMAINING day(s), in the same order, with the same "day" labels.
+- "dist" is running miles as "N mi" (use "0 mi" for rest, strength, CrossFit, or core days). The REMAINING days' miles must add up to exactly ${state.targetMi} mi.
+- No single run longer than ${state.capMi} mi.
+- Keep the week's structure where you can: the long run stays the long run, keep strength/CrossFit/core sessions, avoid hard days back to back, and no heavy leg work within 48 hours before the long run.
+- Account for what was actually logged: move missed miles to sensible days, ease off after extra or harder training, and respect any injury or return-to-run notes.
+- Each day needs "notes" (the workout) and "coachTip" (1-2 sentences in the coach's voice).
+- "note": 1-2 sentences to the athlete on what you changed this week and why.
+
+Output ONLY valid JSON: { "runs": [ { "day": "...", "dist": "N mi", "notes": "...", "long": false, "coachTip": "..." } ], "note": "..." }. No markdown.`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, responseMimeType: 'application/json' },
+      }),
+    }
+  );
+  if (!res.ok) throw new Error(`Gemini API error: ${await res.text()}`);
+  const data = await res.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!content) throw new Error('Empty response from Gemini');
+
+  let parsed: { runs?: unknown; note?: unknown };
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    throw new Error('Could not parse the coach’s week update as JSON');
+  }
+  if (!Array.isArray(parsed.runs)) throw new Error('Coach returned no days for this week');
+  const runs = (parsed.runs as Record<string, unknown>[]).map((r) => ({
+    day: String(r.day ?? ''),
+    dist: String(r.dist ?? ''),
+    notes: String(r.notes ?? ''),
+    long: Boolean(r.long),
+    coachTip: typeof r.coachTip === 'string' ? r.coachTip.trim() : '',
+  }));
+  const note = typeof parsed.note === 'string' ? parsed.note.trim() : '';
+  return { runs, note };
 }
 
 export interface AdaptPlanResult {
