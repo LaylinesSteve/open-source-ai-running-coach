@@ -34,15 +34,53 @@ const progressBarChartOverride = `
 .plan-sticky-actions-item {
   display: contents;
 }
-.plan-sticky-actions-feedback {
-  flex: 1 1 100%;
+.plan-sync-toast {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(340px, 100%);
+  box-sizing: border-box;
+  padding: 10px 34px 10px 12px;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-left: 3px solid #e85d04;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: #d4d4d4;
+  text-align: left;
+}
+.plan-sync-toast--updated { border-left-color: #22c55e; }
+.plan-sync-toast-title {
   margin: 0;
-  max-width: 100%;
-  font-size: 0.75rem;
-  line-height: 1.35;
-  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f5f5f5;
+}
+.plan-sync-toast--updated .plan-sync-toast-title { color: #4ade80; }
+.plan-sync-toast--error .plan-sync-toast-title { color: #ff6b1a; }
+.plan-sync-toast-text {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
   word-break: break-word;
 }
+.plan-sync-toast-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #a3a3a3;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.plan-sync-toast-close:hover,
+.plan-sync-toast-close:focus-visible { color: #f5f5f5; background: rgba(255, 255, 255, 0.08); }
 .plan-sync-strava-sticky,
 .plan-coach-chat-sticky {
   padding: 8px 10px;

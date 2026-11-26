@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 type AdaptationPayload =
@@ -11,6 +11,11 @@ type RebalancePayload =
   | { status: 'updated'; weekNum: number; note: string }
   | { status: 'skipped'; reason: string }
   | { status: 'failed'; error: string };
+
+/** What the last sync has to tell the athlete. "updated" notes fade on their own; problems stay until dismissed. */
+type Notice = { tone: 'updated' | 'warn' | 'error'; title: string; text?: string };
+
+const UPDATED_NOTICE_MS = 15000;
 
 export default function SyncButton({
   planId,
@@ -24,14 +29,18 @@ export default function SyncButton({
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [warn, setWarn] = useState('');
+  const [notice, setNotice] = useState<Notice | null>(null);
 
   const isSticky = variant === 'sticky';
 
+  useEffect(() => {
+    if (notice?.tone !== 'updated') return;
+    const t = setTimeout(() => setNotice(null), UPDATED_NOTICE_MS);
+    return () => clearTimeout(t);
+  }, [notice]);
+
   const runSync = async () => {
-    setError('');
-    setWarn('');
+    setNotice(null);
     setLoading(true);
     try {
       const now = new Date();
@@ -43,22 +52,22 @@ export default function SyncButton({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || 'Sync failed');
+        setNotice({ tone: 'error', title: data.error || 'Sync failed' });
         setLoading(false);
         return;
       }
       const adaptation = data.adaptation as AdaptationPayload | undefined;
       const rebalance = data.rebalance as RebalancePayload | undefined;
       if (rebalance?.status === 'updated') {
-        setWarn(`Coach adjusted the rest of week ${rebalance.weekNum}${rebalance.note ? `: ${rebalance.note}` : '.'}`);
+        setNotice({ tone: 'updated', title: `Week ${rebalance.weekNum} adjusted`, text: rebalance.note || undefined });
       } else if (rebalance?.status === 'failed') {
-        setWarn(`Synced, but this week’s plan wasn’t adjusted: ${rebalance.error}`);
+        setNotice({ tone: 'warn', title: 'Synced, but this week wasn’t adjusted', text: rebalance.error });
       } else if (adaptation && !adaptation.ok && adaptation.error) {
-        setWarn(`Synced, but coach advice didn’t refresh: ${adaptation.error}`);
+        setNotice({ tone: 'warn', title: 'Synced, but coach advice didn’t refresh', text: adaptation.error });
       }
       router.refresh();
     } catch {
-      setError('Something went wrong');
+      setNotice({ tone: 'error', title: 'Something went wrong' });
     }
     setLoading(false);
   };
@@ -94,15 +103,22 @@ export default function SyncButton({
     const content = (
       <>
         {button}
-        {(error || warn) && (
-          <p
-            className="plan-sticky-actions-feedback"
-            style={{
-              color: error ? '#e85d04' : '#a3a3a3',
-            }}
+        {notice && (
+          <div
+            className={`plan-sync-toast plan-sync-toast--${notice.tone}`}
+            role={notice.tone === 'error' ? 'alert' : 'status'}
           >
-            {error || warn}
-          </p>
+            <p className="plan-sync-toast-title">{notice.title}</p>
+            {notice.text && <p className="plan-sync-toast-text">{notice.text}</p>}
+            <button
+              type="button"
+              className="plan-sync-toast-close"
+              aria-label="Dismiss"
+              onClick={() => setNotice(null)}
+            >
+              ×
+            </button>
+          </div>
         )}
       </>
     );
@@ -117,8 +133,17 @@ export default function SyncButton({
   return (
     <div>
       {button}
-      {error && <p style={{ color: '#e85d04', marginTop: '0.5rem', fontSize: '0.9rem' }}>{error}</p>}
-      {warn && !error && <p style={{ color: '#a3a3a3', marginTop: '0.5rem', fontSize: '0.85rem' }}>{warn}</p>}
+      {notice && (
+        <p
+          style={{
+            color: notice.tone === 'error' ? '#e85d04' : '#a3a3a3',
+            marginTop: '0.5rem',
+            fontSize: notice.tone === 'error' ? '0.9rem' : '0.85rem',
+          }}
+        >
+          {notice.text ? `${notice.title}: ${notice.text}` : notice.title}
+        </p>
+      )}
     </div>
   );
 }
